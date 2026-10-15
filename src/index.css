@@ -1,0 +1,24 @@
+:root {
+  /* Paleta nocturna provisional; el HUD (fase 3) define sus propios tonos. */
+  --bg: #02060a;
+  --fg: #7dffb2;
+  font-family: 'B612', system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+body {
+  overflow-x: hidden;
+}
