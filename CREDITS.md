@@ -24,7 +24,12 @@ con las versiones definitivas de las librerías y se refleja también en la pág
 | postprocessing | Zlib |
 | react, react-dom, zustand, lenis | MIT |
 | GSAP (con ScrollTrigger) | [GSAP Standard "no charge" License](https://gsap.com/standard-license) |
-| vite, vitest, @gltf-transform/cli (herramientas de desarrollo, no se distribuyen) | MIT |
+| vite, vitest, @gltf-transform/*, meshoptimizer (herramientas de desarrollo, no se distribuyen) | MIT |
+| sharp (desarrollo): binario libvips | Apache-2.0 y LGPL-3.0-or-later |
+| lightningcss (desarrollo, dentro de Vite) | MPL-2.0 |
+
+Las licencias MPL-2.0, LGPL-3.0 y BlueOak-1.0.0 sólo aparecen en herramientas de compilación
+(Vite, sharp, gltf-transform); ninguna llega al código ni a los assets que se publican. Aceptadas por el autor el 2026-10-15.
 
 ## Inspiración
 

@@ -110,6 +110,21 @@ for (const name of ['cam_pilot', 'hud_anchor', 'mfd_main', 'hud_combiner', 'pane
     const toEye = [0, 1, 2].map((k) => eye[k] - c[k]);
     const dot = n.reduce((s, v, k) => s + v * toEye[k], 0);
     console.log(`\nmfd_main normal mundo ${f(n)} → ${dot > 0 ? 'mira al piloto ✓' : '✗ MIRA HACIA DELANTE, lejos del piloto (se ve la cara trasera y la textura espejada)'}`);
+
+    // Orientación de la textura vista desde el asiento. El piloto mira hacia +Z con +Y arriba,
+    // así que su derecha es -X (x derecha = z_adelante × y_arriba = (-1,0,0)).
+    // glTF pone el origen UV (0,0) arriba a la izquierda de la imagen: u crece hacia la
+    // derecha de la imagen y v hacia abajo. Para que no salga espejada ni al revés:
+    //   - ir de u=0 a u=1 debe avanzar hacia la derecha del piloto (-X), y
+    //   - ir de v=1 a v=0 debe subir (+Y).
+    const p = json.meshes[json.nodes[i].mesh].primitives[0];
+    const pos = readAccessor(p.attributes.POSITION), uv = readAccessor(p.attributes.TEXCOORD_0);
+    const M = worldMatrix(i);
+    const at = (u, v) => xform(M, pos[uv.findIndex((t) => Math.abs(t[0] - u) < 1e-3 && Math.abs(t[1] - v) < 1e-3)]);
+    const du = at(1, 1).map((x, k) => x - at(0, 1)[k]); // sentido de u creciente
+    const dv = at(0, 0).map((x, k) => x - at(0, 1)[k]); // sentido de v decreciente (hacia arriba en la imagen)
+    const right = -du[0] > 0, up = dv[1] > 0;
+    console.log(`mfd_main textura vista desde el asiento: ${right ? 'no espejada ✓' : '✗ ESPEJADA (izquierda↔derecha)'}, ${up ? 'arriba es arriba ✓' : '✗ AL REVÉS (arriba↔abajo)'}`);
   }
 }
 
