@@ -1,12 +1,16 @@
 import { Experience } from './scene/Experience';
 import { Loader } from './hud/overlay/Loader';
-import { EntryButton } from './hud/overlay/EntryButton';
+import { FlightTrack } from './hud/overlay/FlightTrack';
+import { FlightReadout } from './hud/overlay/FlightReadout';
+import { ScrollHint } from './hud/overlay/ScrollHint';
 
 export function App() {
   return (
     <>
       <Experience />
-      <EntryButton />
+      <FlightTrack />
+      <ScrollHint />
+      <FlightReadout />
       <Loader />
     </>
   );

@@ -13,13 +13,13 @@ descubrió trabajando, para retomar en otro PC sin perder contexto. Última actu
 | 0 Inspección del GLB + proyecto | hecha | `8edfc60` |
 | (extra) pipeline de optimización del GLB + prototipo en `reference/` | hecha | `0e8bdfe` |
 | 1 Escena nocturna, avión, entrada a la cabina | hecha | `5dfb5a4` |
-| 2 Ruta de vuelo y scroll (waypoints, snap, alabeo, tests de `route.ts`) | **siguiente** | |
-| 3–7 | pendientes | |
+| 2 Ruta de vuelo y scroll (waypoints, snap, alabeo, tests de `route.ts`) | hecha | (commit de la fase 2) |
+| 3 HUD en pantalla portado del prototipo | **siguiente** | |
+| 4–7 | pendientes | |
 
 Forma de trabajo pedida: antes de cada fase, explicar el enfoque en pocas líneas (comparando opciones
 y recomendando una); al final, detenerse, explicar cómo probarla y hacer commit. Responder en español y
 comentar el porqué de cada técnica, sobre todo la matemática y la física (el usuario estudia telecomunicaciones).
-Los commits terminan con `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
 
 ## Entorno y dependencias
 
@@ -68,8 +68,7 @@ Los commits terminan con `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.c
 
 - `src/store/flight.ts`: Zustand con `ready` y `camMode` (`exterior | cockpit | free | focus`), y el objeto mutable **`rig.enter`** (0 órbita → 1 cabina).
   Regla: nada de `setState` dentro de `useFrame`; lo que cambia por fotograma va en `rig` y se muta.
-- `src/flight/intro.ts`: `playEntry(toCockpit)` anima `rig.enter` con GSAP (5 s, `power2.inOut`; 0.01 s con `prefers-reduced-motion`).
-  **La fase 2 debe sustituir esta animación por ScrollTrigger sobre el mismo `rig.enter`** (la intro ocupa el primer tramo del scroll) y quitar `EntryButton`.
+- (Fase 1 tenía `intro.ts` + `EntryButton`; la fase 2 los eliminó: ahora el scroll controla `rig.enter`.)
 - `src/scene/Aircraft.tsx`: grupo fijo en el origen; contiene el GLB, la cámara (`<primitive object={camera}/>` → cámara hija) y una luz tenue interior.
 - `src/scene/CameraRig.tsx`: posición = Bézier cuadrática P0 (órbita, radio 24 m, altura 4.5 m) → P1 `APPROACH` (0, 3.4, 3.6) → P2 `cam_pilot`.
   Una recta atravesaría el fuselaje opaco; la curva sólo cruza el cristal. FOV 38° → 62°. `useFrame` con prioridad −10 (¡una prioridad positiva
@@ -81,7 +80,30 @@ Los commits terminan con `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.c
   `renderOrder` de transparencias (cristal 1, combinador 2, MFD 3), combinador a 12 % de opacidad, y el arreglo del MFD.
 - `src/hud/overlay/Loader.tsx`: pantalla de carga (`useProgress`), se retira al terminar `compileAsync`. `Experience.tsx` lo dispara (con respaldo de 8 s).
 - Canvas: `dpr=[1,2]`, cámara `near=0.02`, `far=3000`.
-- Parámetros de depuración (sólo en `npm run dev`): `/?enter=0.5&theta=-40&ly=16`.
+- Parámetros de depuración (sólo en `npm run dev`): `/?p=0.08` (progreso del scroll), `/?sec=2` (waypoint 2), `&theta=-40&ly=16` (cámara exterior).
+
+## Arquitectura añadida (fase 2)
+
+- `src/data/content.ts`: el `DATA` del prototipo (`CONTENT`), con los créditos del modelo ya corregidos.
+- `src/flight/route.ts`: funciones puras + `stepFlight` (muta un `FlightState`, sin asignar memoria). Tests en `route.test.ts` (22).
+  Rumbo en grados de brújula; mapa x = este, z = norte. Alabeo del prototipo: ω = Δψ/dt ⇒ el avión se inclina sólo
+  mientras haces scroll en una curva y nivela al parar (decisión: así se lee cada sección con el horizonte recto).
+  En el waypoint el rumbo está a mitad del giro (p. ej. 97° en WP1): el giro termina R_TURN/4 después, como en el prototipo.
+- Reparto del scroll: N tramos iguales (1/N cada uno): el primero es la entrada a la cabina, los otros N−1 la ruta.
+  Snap cada 1/N (7 puntos: exterior + 6 waypoints). `FlightTrack` mide N·120vh + 100vh.
+- `src/flight/scroll.ts`: Lenis (lerp 0.09, movido por `gsap.ticker`, `lagSmoothing(0)`) + un ScrollTrigger con snap
+  (delay 0.25 s, sin inercia). Sin Lenis con `prefers-reduced-motion`. `history.scrollRestoration = 'manual'`: recargar empieza fuera.
+  La sección activa se publica en el store tras 0.18 s estable. `goToSection(i)` listo para el menú/teclado de la fase 3.
+- `store/flight.ts`: `rig.progress`, `rig.s`, `rig.flight` (estado del vuelo) y `section` reactiva.
+- `Aircraft.tsx`: `useFrame` prioridad −20 integra el vuelo y aplica cabeceo (−X) y alabeo (+Z) al grupo del avión (Euler XYZ).
+- Marco del mundo en three: +Z norte, −X este, +Y arriba; cielo, luz lunar y suelo giran `rotation.y = +ψ`. La luna pasó a
+  esta convención (azimut 130° de brújula).
+- `GroundLights.tsx`: 6000 `Points` (ciudades gaussianas, carreteras, dispersas) en una baldosa de 60 km repetida con `mod`
+  en el shader; cada luz se proyecta a una esfera de 1300 m alrededor de la cámara (sólo importa la dirección; `far` sigue en 3000).
+  Brillo con extinción de Beer–Lambert e^(−d/22 km).
+- `FlightReadout.tsx`: lectura provisional (HDG, ALT, BANK, G, γ) escrita por rAF a 10 Hz; **la fase 3 la sustituye por el HUD**.
+  `ScrollHint.tsx`: indicación en el exterior.
+- Aviso inofensivo en consola: "THREE.Clock deprecated" viene de R3F, no del proyecto.
 
 ## Cómo se verificó visualmente (no hay GPU en las pruebas automáticas)
 
@@ -104,7 +126,6 @@ Fuente completa: `reference/cockpit-hud.html` (objeto `DATA` = contenido del sit
 ## Pendientes y avisos
 
 - Bundle de JS: 1.28 MB (363 KB gzip), casi todo three; revisar en la fase 7 (code-splitting, `PerformanceMonitor`).
-- Aún no hay suelo ni luces de ciudad (fase 2, junto con el movimiento del mundo; `GroundLights` con InstancedMesh o Points).
 - Marco del canopy muy azul de noche (luna a través del cristal): se puede oscurecer en `Sky.tsx` (`lerp(1.6, 0.3, k)`).
 - Fuentes B612 vía Google Fonts (enlace en `index.html`); OFL permite autoalojarlas si se quiere funcionar sin conexión.
 - `CREDITS.md` está en borrador; se completa en la fase 7 junto con la página de créditos.

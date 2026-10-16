@@ -2,6 +2,7 @@ import { Suspense, useEffect } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { Aircraft } from './Aircraft';
 import { Sky } from './Sky';
+import { GroundLights } from './GroundLights';
 import { useFlight } from '../store/flight';
 
 /**
@@ -36,6 +37,7 @@ export function Experience() {
     >
       <color attach="background" args={['#010309']} />
       <Sky />
+      <GroundLights />
       <Suspense fallback={null}>
         <Aircraft />
         <Precompile />

@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { rig } from '../store/flight';
-import { prefersReducedMotion } from '../flight/intro';
+import { prefersReducedMotion } from '../flight/scroll';
 import type { CockpitRefs } from './cockpit';
 
 // --- Parámetros de la órbita exterior (metros, en el espacio del avión) ---

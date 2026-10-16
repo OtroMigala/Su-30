@@ -1,8 +1,9 @@
 import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { prefersReducedMotion } from '../flight/intro';
+import { prefersReducedMotion } from '../flight/scroll';
 import { rig } from '../store/flight';
+import { rng } from './random';
 
 const smoothstep = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -14,28 +15,23 @@ const DOME_RADIUS = 1500;
 const STAR_RADIUS = 1200;
 const MOON_DISTANCE = 1000;
 
-// Posición de la luna, del prototipo: azimut 130° (medido desde +Z hacia +X) y elevación 26°.
+// Posición de la luna, del prototipo: azimut 130° (rumbo de brújula: desde el norte, en sentido
+// horario) y elevación 26°.
+//
+// Marco del "mundo" en three.js (lo comparten el cielo y el suelo): +Z = norte, +Y = arriba y
+// −X = este. El este va en −X porque el modelo mira a +Z y, mirando a +Z con +Y arriba, la
+// derecha del piloto es −X. Así, con rumbo 0 (nariz al norte), el este queda a su derecha, como
+// en un mapa. Un punto de azimut b es entonces (−sen b·cos e, sen e, cos b·cos e).
 const MOON_AZ = 130 * DEG;
 const MOON_EL = 26 * DEG;
 const MOON_DIR = new THREE.Vector3(
-  Math.sin(MOON_AZ) * Math.cos(MOON_EL),
+  -Math.sin(MOON_AZ) * Math.cos(MOON_EL),
   Math.sin(MOON_EL),
   Math.cos(MOON_AZ) * Math.cos(MOON_EL),
 );
 // Tamaño aparente: un disco de radio r a distancia D subtiende un ángulo θ con tan θ = r/D.
 // La luna real mide 0.26°; la exageramos a 1.4° para que se aprecie en un FOV de 62°.
 const MOON_RADIUS = MOON_DISTANCE * Math.tan(1.4 * DEG);
-
-/** Generador pseudoaleatorio con semilla (mulberry32): las mismas estrellas en cada carga. */
-function rng(seed: number) {
-  let a = seed;
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 // ---- Cúpula del cielo ----
 // Colores del tema nocturno del prototipo. THREE.Color los pasa de sRGB (como se escriben)
@@ -153,6 +149,11 @@ function useHaloTexture() {
  * cámara cada fotograma pero no su rotación: así el cielo se ve "en el infinito" y no tiene
  * paralaje. Si fuera fijo, al orbitar 24 m la luna (a 1000 m) se desplazaría ~1.4°.
  * La luz lunar va aparte, en el origen, para que su dirección no cambie al seguir a la cámara.
+ *
+ * Rumbo: el avión no gira en guiñada; es el cielo el que gira rotation.y = +ψ. Con la rotación
+ * Ry(ψ), un punto de azimut b acaba en (−sen(b−ψ), ·, cos(b−ψ)): azimut relativo b − ψ, que es
+ * justo dónde lo ve el piloto (si vuelas a 130°, la luna de azimut 130° queda delante).
+ * La luz lunar gira con el mismo ángulo para que la luz venga de donde se ve la luna.
  */
 export function Sky() {
   const follow = useRef<THREE.Group>(null);
@@ -163,11 +164,17 @@ export function Sky() {
   const tmp = useMemo(() => new THREE.Vector3(), []);
 
   const moonLight = useRef<THREE.DirectionalLight>(null);
+  const moonLightPivot = useRef<THREE.Group>(null);
   const skyLight = useRef<THREE.HemisphereLight>(null);
 
   useFrame((state) => {
     camera.getWorldPosition(tmp);
-    follow.current?.position.copy(tmp);
+    const heading = rig.flight.heading * DEG;
+    if (follow.current) {
+      follow.current.position.copy(tmp);
+      follow.current.rotation.y = heading;
+    }
+    if (moonLightPivot.current) moonLightPivot.current.rotation.y = heading;
 
     // Al entrar en la cabina se atenúan las luces: el exterior necesita luz para verse, pero un
     // interior nocturno debe ser oscuro para que los instrumentos emisivos (y luego el HUD)
@@ -197,7 +204,9 @@ export function Sky() {
           </sprite>
         </group>
       </group>
-      <directionalLight ref={moonLight} position={MOON_DIR.clone().multiplyScalar(100)} color="#a9bcff" intensity={1.6} />
+      <group ref={moonLightPivot}>
+        <directionalLight ref={moonLight} position={MOON_DIR.clone().multiplyScalar(100)} color="#a9bcff" intensity={1.6} />
+      </group>
       {/* Luz ambiental azulada y tenue: la que llega del cielo nocturno y rebota en el suelo. */}
       <hemisphereLight ref={skyLight} args={['#2a3a66', '#05070c', 0.55]} />
     </>
