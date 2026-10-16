@@ -3,7 +3,7 @@ import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useFlight } from '../store/flight';
 
-const URL = '/textures/panel_front.webp';
+const URL = `${import.meta.env.BASE_URL}textures/panel_front.webp`;
 
 /**
  * Textura del panel delantero a resolución completa, con carga diferida.

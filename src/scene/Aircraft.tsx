@@ -15,7 +15,9 @@ import { syncFromManual } from '../flight/autopilot';
 import { useFlight } from '../store/flight';
 import { prefersReducedMotion } from '../flight/scroll';
 
-export const MODEL_URL = '/models/su30.glb';
+// BASE_URL: '/' en desarrollo y '/Su-30/' en GitHub Pages (vite.config.ts). Las rutas a public/
+// deben llevarla delante; una ruta absoluta '/models/...' apuntaría a otromigala.github.io/models.
+export const MODEL_URL = `${import.meta.env.BASE_URL}models/su30.glb`;
 
 /**
  * El avión queda FIJO en el origen (CLAUDE.md): lo que se mueve es el mundo. Este grupo sólo

@@ -48,7 +48,7 @@ const ext = () => (new Audio().canPlayType('audio/webm; codecs="opus"') ? 'webm'
 const raw: Record<Name, Promise<ArrayBuffer | null>> = (() => {
   const e = typeof window === 'undefined' ? 'mp3' : ext();
   const get = (n: Name) =>
-    fetch(`/sounds/${n}.${e}`).then((r) => (r.ok ? r.arrayBuffer() : null), () => null);
+    fetch(`${import.meta.env.BASE_URL}sounds/${n}.${e}`).then((r) => (r.ok ? r.arrayBuffer() : null), () => null);
   return { ambient: get('ambient'), spool: get('spool'), thrust: get('thrust') };
 })();
 

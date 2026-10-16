@@ -34,12 +34,11 @@ export const CONTENT = {
   pilot: 'J. A. CÁRDENAS',
   callsign: 'ALEJO',
   role: 'Ingeniería en Telecomunicaciones · Universidad del Cauca',
-  // EDITAR: tus enlaces reales
+  // Enlaces del briefing: [rótulo, texto visible, URL]. Se pueden añadir más (LinkedIn, correo...).
   links: [
-    ['PORTAFOLIO', 'tu-portafolio.com', 'https://tu-portafolio.com'],
-    ['GITHUB', 'github.com/tu-usuario', 'https://github.com/'],
-    ['LINKEDIN', 'linkedin.com/in/tu-usuario', 'https://www.linkedin.com/'],
-    ['EMAIL', 'tu-correo@ejemplo.com', 'mailto:tu-correo@ejemplo.com'],
+    ['PORTAFOLIO', 'otromigala.github.io/portfolio-websit', 'https://otromigala.github.io/portfolio-websit/'],
+    ['GITHUB', 'github.com/OtroMigala', 'https://github.com/OtroMigala'],
+    ['CÓDIGO', 'github.com/OtroMigala/Su-30', 'https://github.com/OtroMigala/Su-30'],
   ] as readonly (readonly [string, string, string])[],
 
   sections: [

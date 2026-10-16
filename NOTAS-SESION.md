@@ -250,6 +250,20 @@ comentar el porqué de cada técnica, sobre todo la matemática y la física (el
   (19 km); sprites y radar de pantalla sólo si SNR ≥ 13 dB y a < 1.6 tramos de RDR. Clic → análisis en la página RDR.
 - Menú: el contador de cada sección = nº de tecnologías de su `stack`. Texto accesible (FlightTrack) con teoría, stack, enlaces,
   ficha y créditos.
+
+## Despliegue (GitHub Pages)
+
+- Repo `OtroMigala/Su-30` → https://otromigala.github.io/Su-30/ (Settings → Pages → Source: GitHub Actions, ya configurado).
+- `.github/workflows/deploy.yml`: en cada push a main, `npm ci` → `npm test` → `npm run build` con `BASE_PATH=/<repo>/` →
+  upload-pages-artifact → deploy-pages. Acciones fijadas a versión exacta con ≥ 2 semanas (checkout v7.0.1, setup-node v7.0.0,
+  configure-pages v6.0.0, upload-pages-artifact v5.0.0, deploy-pages v5.0.1; consultado 2026-10-16).
+- `vite.config.ts`: `base: process.env.BASE_PATH || '/'`. Las rutas a public/ usan `import.meta.env.BASE_URL` (modelo, sonidos,
+  textura del panel). OJO en Git Bash: `/Su-30/` se convierte en ruta de Windows; usar `MSYS_NO_PATHCONV=1` para probar en local:
+  `MSYS_NO_PATHCONV=1 BASE_PATH=/Su-30/ npm run build && MSYS_NO_PATHCONV=1 BASE_PATH=/Su-30/ npx vite preview`.
+- El lockfile (generado en Windows) incluye los binarios nativos de Linux (rolldown, lightningcss, sharp): `npm ci` funciona en el runner.
+- Enlaces del briefing: portafolio https://otromigala.github.io/portfolio-websit/ (así, sin "e": la otra da 404), GitHub y el
+  repo. No se publicó el correo del autor (pendiente de que lo pida); LinkedIn por añadir.
+
 - Aviso inofensivo en consola: "THREE.Clock deprecated" viene de R3F, no del proyecto.
 
 ## Cómo se verificó visualmente (no hay GPU en las pruebas automáticas)

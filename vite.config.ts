@@ -3,6 +3,10 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  // Ruta base del sitio publicado. GitHub Pages sirve el repositorio "Su-30" en
+  // https://otromigala.github.io/Su-30/, así que allí la base es '/Su-30/' (la pone el workflow con
+  // BASE_PATH). En local, '/'. El código usa import.meta.env.BASE_URL para sus archivos de public/.
+  base: process.env.BASE_PATH || '/',
   build: {
     // three.js minificado mide ~740 KB (187 KB gzip) y no se puede trocear más: se sube el umbral
     // del aviso para que sólo salte si algo crece de verdad.
