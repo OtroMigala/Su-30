@@ -6,7 +6,7 @@ import { CONTENT } from '../../data/content';
 const pad = (n: number, w = 3) => String(Math.round(n)).padStart(w, '0');
 
 /**
- * Lectura PROVISIONAL de la fase 2 para comprobar la física mientras no exista el HUD (fase 3).
+ * Lectura de DEPURACIÓN (sólo con /?debug en desarrollo) para comprobar la física con números.
  *
  * No usa estado de React: un bucle propio de requestAnimationFrame escribe textContent 10 veces
  * por segundo directamente en el DOM. Es la misma regla que en useFrame (nada de setState por

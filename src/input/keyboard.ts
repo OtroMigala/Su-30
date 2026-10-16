@@ -1,15 +1,19 @@
-import { setThrottleDir } from '../flight/scroll';
+import { goToSection, setThrottleDir } from '../flight/scroll';
+import { N } from '../flight/route';
 import { setMuted, unlockAudio } from '../audio/engine';
 import { useFlight } from '../store/flight';
 
 /**
  * Teclado global.
  *   W / S  acelerar hacia delante / atrás (mantener pulsada)
+ *   Q / E  mover el cursor del menú de secciones · Enter: volar a la sección elegida
+ *   1 … 6  volar directamente a una sección
  *   M      silenciar el sonido
  *
  * Se usa KeyboardEvent.code (la tecla FÍSICA) y no .key (el carácter): en un teclado AZERTY la
  * tecla que ocupa el lugar de la W escribe "Z", pero su code sigue siendo "KeyW". Así el control
- * queda bajo los mismos dedos en cualquier distribución.
+ * queda bajo los mismos dedos en cualquier distribución. Con los números pasa algo parecido: en
+ * AZERTY hay que pulsar Mayús para escribir "1", pero code = "Digit1" sin Mayús.
  */
 export function initKeyboard() {
   const held = new Set<string>();
@@ -29,9 +33,21 @@ export function initKeyboard() {
       e.preventDefault();
       held.add(e.code); // la autorrepetición del teclado no cambia nada: es un Set
       update();
-    } else if (e.code === 'KeyM' && !e.repeat) {
-      const s = useFlight.getState();
-      s.setMuted(!s.muted);
+      return;
+    }
+    if (e.repeat) return;
+    const s = useFlight.getState();
+    if (e.code === 'KeyM') s.setMuted(!s.muted);
+    // Q/E: el cursor da la vuelta (módulo N). Sumar N antes del % evita restos negativos en JS.
+    else if (e.code === 'KeyQ') s.setMenuSel((s.menuSel + N - 1) % N);
+    else if (e.code === 'KeyE') s.setMenuSel((s.menuSel + 1) % N);
+    else if (e.code === 'Enter' || e.code === 'NumpadEnter') {
+      // Con el foco en un botón o enlace, Enter ya lo activa el navegador: no lo duplicamos.
+      if (e.target instanceof HTMLButtonElement || e.target instanceof HTMLAnchorElement) return;
+      goToSection(s.menuSel);
+    } else {
+      const m = /^(?:Digit|Numpad)([1-9])$/.exec(e.code);
+      if (m && Number(m[1]) <= N) goToSection(Number(m[1]) - 1);
     }
   };
   const up = (e: KeyboardEvent) => {

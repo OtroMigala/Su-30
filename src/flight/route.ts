@@ -135,6 +135,39 @@ export function altAt(s: number) {
   return ALT[k]! + (ALT[k + 1]! - ALT[k]!) * smoothstep(0, 1, t);
 }
 
+/** Índice de la sección de proyectos (sus objetivos aparecen cerca de ese waypoint). */
+export const PROJ_IDX = CONTENT.sections.findIndex((s) => s.id === 'projects');
+
+/**
+ * Proyectos como "objetivos" en el cielo, frente al waypoint de proyectos (del prototipo).
+ * Cada uno está `fwd` metros por delante en el rumbo del tramo y `lat` metros a un lado.
+ * El vector "derecha" de un rumbo ψ es (cos ψ, −sen ψ) en (este, norte): es el vector delante
+ * (sen ψ, cos ψ) girado 90° en sentido horario. Así lat > 0 queda a la derecha del piloto.
+ */
+export const TARGETS: readonly { x: number; z: number; alt: number }[] = CONTENT.projects.map((_, i) => {
+  const base = WP[PROJ_IDX]!, h = LEG_H[PROJ_IDX]! * DEG;
+  const fwd = [3600, 5400, 7200, 9000][i % 4]!, lat = [-2600, 2200, -1500, 2900][i % 4]!;
+  return {
+    x: base.x + Math.sin(h) * fwd + Math.cos(h) * lat,
+    z: base.z + Math.cos(h) * fwd - Math.sin(h) * lat,
+    alt: ALT[PROJ_IDX]! + [250, -150, 420, 80][i % 4]!,
+  };
+});
+
+/**
+ * Radar con la nariz hacia arriba ("heading up", como en los cazas): convierte un punto del mapa
+ * a coordenadas de la pantalla del radar, con el avión en el centro y radio 1 = `range` metros.
+ * Se pasa a polares (distancia, marcación relativa = marcación absoluta − rumbo) y se vuelve a
+ * cartesianas con "arriba" = delante: x = r·sen(rel) (derecha +), y = −r·cos(rel) (arriba −,
+ * porque en un canvas la y crece hacia abajo). Lo que está fuera de alcance se pega al borde.
+ */
+export function radarPoint(dx: number, dz: number, headingDeg: number, range: number) {
+  const d = Math.hypot(dx, dz);
+  const rel = angDiff(Math.atan2(dx, dz) / DEG, headingDeg) * DEG;
+  const r = Math.min(d / range, 1);
+  return { x: Math.sin(rel) * r, y: -Math.cos(rel) * r, out: d > range };
+}
+
 // ---------------------------------------------------------------------------
 // Física
 // ---------------------------------------------------------------------------

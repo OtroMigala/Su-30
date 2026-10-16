@@ -27,7 +27,7 @@ export const CONTENT = {
   callsign: 'ALEJO',
   sections: [
     { id: 'start', code: 'TKOF', menu: 'START', label: 'Despegue', alt: 900,
-      radio: ['CONTROL', 'Bienvenido a bordo. Haz scroll para despegar; con F miras alrededor.'] },
+      radio: ['CONTROL', 'Bienvenido a bordo. Mantén W para despegar; con Q y E eliges tu destino.'] },
     { id: 'about', code: 'PRFL', menu: 'ABOUT', label: 'Perfil', alt: 2200,
       radio: ['CONTROL', 'Waypoint alcanzado. Transmitiendo el perfil del piloto a tu pantalla.'] },
     { id: 'projects', code: 'TGTS', menu: 'PROJ', label: 'Proyectos', alt: 3000,

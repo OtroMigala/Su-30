@@ -89,8 +89,12 @@ export function initScroll(track: HTMLElement) {
   applyProgress(trigger.progress);
 
   gsap.ticker.add(throttleTick);
-  // La rueda o el dedo cancelan el planeo automático al soltar W/S: manda el usuario.
-  const userScroll = () => cancelGlide();
+  // La rueda o el dedo cancelan el planeo automático al soltar W/S y el vuelo automático del
+  // menú (Lenis lo interrumpe sin llamar a onComplete, así que aquí también se apaga el motor).
+  const userScroll = () => {
+    cancelGlide();
+    if (throttleDir === 0) setEngineSound(false);
+  };
   addEventListener('wheel', userScroll, { passive: true });
   addEventListener('touchstart', userScroll, { passive: true });
 
@@ -122,12 +126,16 @@ function lenisRaf(time: number) {
   lenis?.raf(time * 1000);
 }
 
-/** Lleva el scroll al progreso P (0..1). */
-export function scrollToProgress(P: number, immediate = false) {
+/** Lleva el scroll al progreso P (0..1). `onDone` se llama al llegar. */
+export function scrollToProgress(P: number, immediate = false, onDone?: () => void) {
   if (!trigger) return;
   const y = trigger.start + (trigger.end - trigger.start) * P;
-  if (lenis) lenis.scrollTo(y, { immediate, duration: 2.2, force: true });
-  else window.scrollTo({ top: y, behavior: 'auto' });
+  if (lenis && !immediate) lenis.scrollTo(y, { duration: 2.2, force: true, onComplete: onDone });
+  else {
+    if (lenis) lenis.scrollTo(y, { immediate: true, force: true });
+    else window.scrollTo({ top: y, behavior: 'auto' });
+    onDone?.();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -236,7 +244,16 @@ function throttleTick(_time: number, deltaMs: number) {
   setScroll(position);
 }
 
-/** Vuela al waypoint i (lo usarán el menú y el teclado en la fase 3). */
+/**
+ * Vuela al waypoint i (menú, Enter, teclas 1–6). Es un vuelo automático: suena el motor
+ * mientras dura y se apaga al llegar (salvo que el usuario esté acelerando con W/S).
+ */
 export function goToSection(i: number) {
-  scrollToProgress(progressForSection(i), prefersReducedMotion());
+  const P = progressForSection(i);
+  cancelGlide();
+  const far = Math.abs(P - rig.progress) > 1e-3;
+  if (far && !reducedMotion) setEngineSound(true);
+  scrollToProgress(P, reducedMotion, () => {
+    if (throttleDir === 0) setEngineSound(false);
+  });
 }

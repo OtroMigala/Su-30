@@ -3,7 +3,7 @@ import {
   ALT, AOA, BANK_MAX, L_TOTAL, LEG_H, N, R_TURN, SEG, SNAP_STEP, WP,
   altAt, angDiff, coordinatedBank, createFlightState, damp, flightPathAngle, groundElevation,
   headingAt, lerpAngle, loadFactor, norm360, posAt, progressForSection, scrollToFlight,
-  sectionAt, smoothstep, stepFlight,
+  sectionAt, smoothstep, stepFlight, PROJ_IDX, TARGETS, radarPoint,
 } from './route';
 
 describe('utilidades angulares', () => {
@@ -95,6 +95,34 @@ describe('geometría de la ruta', () => {
     for (let s = 0; s < L_TOTAL; s += 10) {
       expect(Math.abs(angDiff(headingAt(s + 10), headingAt(s)))).toBeLessThan(maxStep + 1e-9);
     }
+  });
+});
+
+describe('objetivos y radar', () => {
+  it('un objetivo por proyecto, delante del waypoint de proyectos', () => {
+    expect(TARGETS.length).toBeGreaterThan(0);
+    const wp = WP[PROJ_IDX]!, h = (LEG_H[PROJ_IDX]! * Math.PI) / 180;
+    for (const t of TARGETS) {
+      const ahead = (t.x - wp.x) * Math.sin(h) + (t.z - wp.z) * Math.cos(h); // proyección sobre el rumbo
+      expect(ahead).toBeGreaterThan(3000);
+    }
+  });
+
+  it('radarPoint: delante = arriba, derecha = derecha, fuera de alcance al borde', () => {
+    // Rumbo norte, punto al norte a media distancia: centro-arriba a radio 0.5
+    const a = radarPoint(0, 5000, 0, 10000);
+    expect(a.x).toBeCloseTo(0, 10);
+    expect(a.y).toBeCloseTo(-0.5, 10);
+    // Rumbo norte, punto al este: a la derecha
+    expect(radarPoint(5000, 0, 0, 10000).x).toBeCloseTo(0.5, 10);
+    // Rumbo este, punto al este: ahora está delante (arriba)
+    const c = radarPoint(5000, 0, 90, 10000);
+    expect(c.x).toBeCloseTo(0, 10);
+    expect(c.y).toBeCloseTo(-0.5, 10);
+    // Fuera de alcance: radio 1 y marcado
+    const d = radarPoint(0, -50000, 0, 10000);
+    expect(d.out).toBe(true);
+    expect(Math.hypot(d.x, d.y)).toBeCloseTo(1, 10);
   });
 });
 

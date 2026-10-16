@@ -13,10 +13,13 @@ interface FlightStore {
   section: number;
   /** Sonido silenciado (tecla M o botón). */
   muted: boolean;
+  /** Cursor del menú tipo selector de armas (Q/E lo mueven, Enter vuela ahí). */
+  menuSel: number;
   setReady: (ready: boolean) => void;
   setCamMode: (mode: CamMode) => void;
   setSection: (section: number) => void;
   setMuted: (muted: boolean) => void;
+  setMenuSel: (i: number) => void;
 }
 
 // Estado "reactivo": sólo lo que la interfaz HTML necesita redibujar (cambia pocas veces).
@@ -27,9 +30,12 @@ export const useFlight = create<FlightStore>((set, get) => ({
   camMode: 'exterior',
   section: 0,
   muted: readMuted(),
+  menuSel: 0,
   setReady: (ready) => set({ ready }),
   setCamMode: (camMode) => get().camMode !== camMode && set({ camMode }),
-  setSection: (section) => get().section !== section && set({ section }),
+  // Al llegar a una sección, el cursor del menú salta a ella (como en el prototipo).
+  setSection: (section) => get().section !== section && set({ section, menuSel: section }),
+  setMenuSel: (menuSel) => get().menuSel !== menuSel && set({ menuSel }),
   setMuted: (muted) => {
     set({ muted });
     try {

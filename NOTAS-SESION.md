@@ -14,8 +14,9 @@ descubrió trabajando, para retomar en otro PC sin perder contexto. Última actu
 | (extra) pipeline de optimización del GLB + prototipo en `reference/` | hecha | `0e8bdfe` |
 | 1 Escena nocturna, avión, entrada a la cabina | hecha | `5dfb5a4` |
 | 2 Ruta de vuelo y scroll (waypoints, snap, alabeo, tests de `route.ts`) | hecha | (commit de la fase 2) |
-| 3 HUD en pantalla portado del prototipo | **siguiente** | |
-| 4–7 | pendientes | |
+| 3 HUD en pantalla portado del prototipo | hecha | (commit de la fase 3) |
+| 4 HUD del combinador con stencil | **siguiente** | |
+| 5–7 | pendientes | |
 
 Forma de trabajo pedida: antes de cada fase, explicar el enfoque en pocas líneas (comparando opciones
 y recomendando una); al final, detenerse, explicar cómo probarla y hacer commit. Responder en español y
@@ -118,6 +119,25 @@ comentar el porqué de cada técnica, sobre todo la matemática y la física (el
   El AudioContext se crea en la primera tecla o clic (política de autoplay). Botón `SoundToggle` (SND ON/OFF).
 - Sonidos: originales en `assets-src/sounds/` (en .gitignore) → `npm run sounds` (necesita ffmpeg; winget Gyan.FFmpeg, o variable FFMPEG)
   → `public/sounds/{ambient,spool,thrust}.{webm,mp3}` (Opus 64k + MP3 96k, mono, loudnorm −18 LUFS). Cortes justificados en el script.
+
+## Arquitectura añadida (fase 3)
+
+- `src/hud/overlay/Hud.tsx`: contenedor del HUD HTML (z-index 4, `inert` y opacidad 0 en el exterior). Anuncia por radio cada
+  sección al llegar y, al entrar a la cabina, la sección actual.
+- `Status` (TIME por setInterval escribiendo en el DOM, PILOT, WPT), `Radio` + `radioQueue.ts` (cola imperativa con escritura;
+  la parte visible es aria-hidden y una región `role=status` oculta recibe el mensaje completo una vez), `KeysHelp`,
+  `Radar` (canvas 2D con rAF propio, heading-up, alcance 30 km, usa `posAt(s)` sin deriva), `WeaponMenu` (botones en `<nav>`;
+  `aria-current="location"` = sección activa, clase `sel` = cursor de Q/E).
+- OJO Windows: `Radio.tsx` y `radio.ts` chocan (rutas sin distinción de mayúsculas) → el módulo se llama `radioQueue.ts`.
+- `route.ts`: `PROJ_IDX`, `TARGETS` (objetivos de proyectos, del prototipo) y `radarPoint` (con tests, 24 en total).
+- Teclado: Q/E (cursor, módulo N), Enter (vuela a la selección; no si el foco está en botón/enlace), 1–6 (Digit/Numpad).
+  `goToSection` suena el motor durante el vuelo automático (Lenis 2.2 s) y lo apaga al llegar o si el usuario usa la rueda.
+- Contenido accesible: `FlightTrack` (`<main>`) lleva `<h1>` y una `<section>` por waypoint con texto real y enlaces,
+  colocada a (i+1)·120vh. Con Tab, la sección con foco se muestra como panel (`:focus-within`) y el avión vuela a ella.
+  Su versión visual definitiva será el MFD (fase 6).
+- `FlightReadout` ya sólo con `/?debug` en desarrollo. Mensaje de radio inicial cambiado a "Mantén W para despegar...".
+- Pendiente para fases siguientes: cintas/escalera/NEXT (4), MIRAR/HEAD FREE (5), objetivos 3D, MFD y MASTER CAUTION (6),
+  menú y radar en móvil (7: el prototipo los oculta por debajo de 760/500 px).
 - Aviso inofensivo en consola: "THREE.Clock deprecated" viene de R3F, no del proyecto.
 
 ## Cómo se verificó visualmente (no hay GPU en las pruebas automáticas)

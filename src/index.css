@@ -4,6 +4,10 @@
   --hud: #8dffa0;
   --hud-dim: rgba(141, 255, 160, 0.5);
   --amber: #ffb84d;
+  --hud-faint: rgba(141, 255, 160, 0.14);
+  --ally: #7fd4ff;
+  --alert: #ff5a4f;
+  --radio-text: #eef6ff;
   --glow: 0 0 6px rgba(141, 255, 160, 0.6);
   font-family: 'B612 Mono', ui-monospace, 'Courier New', monospace;
   color-scheme: dark;
@@ -120,12 +124,12 @@ body {
   }
 }
 
-/* --- Lectura provisional de la fase 2 (la reemplaza el HUD en la fase 3) --- */
+/* --- Lectura de depuración (/?debug) --- */
 .readout {
   position: fixed;
   z-index: 5;
   left: calc(env(safe-area-inset-left, 0px) + 16px);
-  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  top: calc(env(safe-area-inset-top, 0px) + 100px);
   padding: 8px 12px;
   background: rgba(2, 12, 6, 0.45);
   border: 1px solid var(--hud-dim);
@@ -175,7 +179,256 @@ body {
   outline-offset: 3px;
 }
 
+/* ============================================================
+   HUD en pantalla (portado de reference/cockpit-hud.html)
+   ============================================================ */
+.hud {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none; /* deja pasar la rueda y los clics al canvas... */
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+.hud.on {
+  opacity: 1;
+}
+.hud :is(button, a) {
+  pointer-events: auto; /* ...salvo en sus controles */
+}
+.glow {
+  text-shadow: var(--glow);
+}
+
+.status {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  left: calc(env(safe-area-inset-left, 0px) + 20px);
+  font-size: 13px;
+  line-height: 1.55;
+  letter-spacing: 0.04em;
+}
+.status b {
+  font-weight: 400;
+}
+
+.radio {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(640px, 58vw);
+  text-align: center;
+  font-family: 'B612', system-ui, sans-serif;
+  transition: opacity 0.4s;
+}
+.radio .who {
+  color: var(--ally);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.radio .msg {
+  color: var(--radio-text);
+  font-size: 15px;
+  line-height: 1.45;
+  min-height: 1.45em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+.radio .msg::before {
+  content: '<< ';
+  color: var(--ally);
+}
+.radio .msg::after {
+  content: ' >>';
+  color: var(--ally);
+}
+.radio.idle {
+  opacity: 0;
+}
+
+.keys {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 58px); /* bajo el botón SND */
+  right: calc(env(safe-area-inset-right, 0px) + 20px);
+  font-size: 11px;
+  line-height: 1.7;
+  text-align: right;
+  color: var(--hud-dim);
+}
+.keys kbd {
+  font-family: inherit;
+  color: var(--hud);
+  border: 1px solid var(--hud-dim);
+  padding: 0 4px;
+  border-radius: 2px;
+}
+
+.radar {
+  position: absolute;
+  left: calc(env(safe-area-inset-left, 0px) + 20px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+  width: 180px;
+  height: 180px;
+  border: 1.5px solid var(--hud);
+  background: rgba(2, 12, 6, 0.35);
+  box-shadow: 0 0 8px rgba(141, 255, 160, 0.25);
+}
+.radar canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.weapons {
+  position: absolute;
+  right: calc(env(safe-area-inset-right, 0px) + 20px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+.weapons ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.weapons button {
+  display: grid;
+  grid-template-columns: 1.1em 7ch 3ch;
+  gap: 0.5em;
+  align-items: baseline;
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  color: var(--hud-dim);
+  text-align: left;
+  text-shadow: inherit;
+}
+.weapons button .cur {
+  visibility: hidden;
+  color: var(--hud);
+}
+.weapons button .n {
+  text-align: right;
+}
+.weapons button[aria-current] {
+  color: var(--hud);
+}
+.weapons button.sel .cur {
+  visibility: visible;
+}
+.weapons button:hover {
+  color: var(--hud);
+}
+.weapons button:focus-visible {
+  outline: 1px solid var(--hud);
+  outline-offset: 2px;
+}
+.jet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+.jet svg {
+  width: 46px;
+  height: 62px;
+  filter: drop-shadow(0 0 3px rgba(141, 255, 160, 0.6));
+}
+
+/* Texto sólo para lectores de pantalla: fuera de la vista pero en el árbol de accesibilidad.
+   (display:none o visibility:hidden lo quitarían también para ellos.) */
+.sr {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* Sección del contenido con el foco dentro (Tab): se muestra como panel para que el foco se vea. */
+.track-section:focus-within {
+  position: fixed !important;
+  z-index: 7;
+  left: 50%;
+  top: auto !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+  transform: translateX(-50%);
+  width: min(560px, 92vw);
+  height: auto;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  white-space: normal;
+  padding: 10px 14px;
+  background: rgba(2, 12, 6, 0.85);
+  border: 1px solid var(--hud);
+  font-size: 13px;
+  line-height: 1.5;
+  pointer-events: auto;
+  text-shadow: var(--glow);
+}
+.track-section h2 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.track-section :is(p, ul) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.track-section a {
+  color: var(--hud);
+}
+.track-section a:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+/* Pantallas estrechas (móvil): sin teclado, menos espacio. */
+@media (max-width: 760px) {
+  .keys,
+  .weapons {
+    display: none;
+  }
+  .radio {
+    width: 88vw;
+    top: calc(env(safe-area-inset-top, 0px) + 72px);
+  }
+  .radio .msg,
+  .radio .who {
+    font-size: 13px;
+  }
+  .status {
+    font-size: 11px;
+    left: 14px;
+  }
+  .radar {
+    width: 96px;
+    height: 96px;
+    left: 10px;
+    top: calc(env(safe-area-inset-top, 0px) + 140px);
+    bottom: auto;
+  }
+}
+@media (max-width: 500px) {
+  .radar {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .hud,
+  .radio,
   .loader,
   .scroll-hint {
     transition: none;
