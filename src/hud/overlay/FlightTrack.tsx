@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { initScroll } from '../../flight/scroll';
+import { initKeyboard } from '../../input/keyboard';
 import { N } from '../../flight/route';
 
 /**
@@ -12,6 +13,13 @@ const SEGMENT_VH = 120;
 
 export function FlightTrack() {
   const ref = useRef<HTMLElement>(null);
-  useEffect(() => initScroll(ref.current!), []);
+  useEffect(() => {
+    const stopScroll = initScroll(ref.current!);
+    const stopKeys = initKeyboard();
+    return () => {
+      stopKeys();
+      stopScroll();
+    };
+  }, []);
   return <main ref={ref} className="flight-track" style={{ height: `${N * SEGMENT_VH + 100}vh` }} aria-hidden="true" />;
 }

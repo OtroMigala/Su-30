@@ -11,9 +11,12 @@ interface FlightStore {
   camMode: CamMode;
   /** Sección activa (waypoint más cercano, ya estabilizado). La leerán el HUD y el MFD. */
   section: number;
+  /** Sonido silenciado (tecla M o botón). */
+  muted: boolean;
   setReady: (ready: boolean) => void;
   setCamMode: (mode: CamMode) => void;
   setSection: (section: number) => void;
+  setMuted: (muted: boolean) => void;
 }
 
 // Estado "reactivo": sólo lo que la interfaz HTML necesita redibujar (cambia pocas veces).
@@ -23,10 +26,28 @@ export const useFlight = create<FlightStore>((set, get) => ({
   ready: false,
   camMode: 'exterior',
   section: 0,
+  muted: readMuted(),
   setReady: (ready) => set({ ready }),
   setCamMode: (camMode) => get().camMode !== camMode && set({ camMode }),
   setSection: (section) => get().section !== section && set({ section }),
+  setMuted: (muted) => {
+    set({ muted });
+    try {
+      localStorage.setItem('su30.muted', muted ? '1' : '0');
+    } catch {
+      /* almacenamiento bloqueado (modo privado): sólo no se recuerda */
+    }
+  },
 }));
+
+/** La preferencia de silencio se recuerda entre visitas (si el navegador deja guardar). */
+function readMuted() {
+  try {
+    return localStorage.getItem('su30.muted') === '1';
+  } catch {
+    return false;
+  }
+}
 
 // Estado "por fotograma": se muta directamente, NUNCA con setState dentro de useFrame.
 // Un setState dispara re-renders de React; a 60 fps eso sería 60 renders por segundo.

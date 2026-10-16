@@ -97,6 +97,17 @@ body {
   pointer-events: none;
   transition: opacity 0.5s ease;
 }
+.scroll-hint kbd,
+.readout-keys kbd {
+  padding: 0 5px;
+  border: 1px solid var(--hud-dim);
+  font: inherit;
+}
+.scroll-hint-sub {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--hud-dim);
+}
 .scroll-hint.hidden {
   opacity: 0;
 }
@@ -127,9 +138,41 @@ body {
   color: var(--amber);
   letter-spacing: 0.08em;
 }
+.readout-keys {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--hud-dim);
+}
 .readout pre {
   margin: 0;
   font: inherit;
+}
+
+/* --- Botón de sonido --- */
+.sound-btn {
+  position: fixed;
+  z-index: 6;
+  right: calc(env(safe-area-inset-right, 0px) + 16px);
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  padding: 6px 10px;
+  background: rgba(2, 12, 6, 0.45);
+  border: 1px solid var(--hud-dim);
+  color: var(--hud);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-shadow: var(--glow);
+  cursor: pointer;
+}
+.sound-btn[aria-pressed='false'] {
+  color: var(--amber);
+}
+.sound-btn:hover {
+  background: rgba(141, 255, 160, 0.12);
+}
+.sound-btn:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 3px;
 }
 
 @media (prefers-reduced-motion: reduce) {

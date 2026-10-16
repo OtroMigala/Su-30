@@ -5,7 +5,10 @@ export function ScrollHint() {
   const exterior = useFlight((s) => s.camMode === 'exterior');
   return (
     <div className={`scroll-hint${exterior ? '' : ' hidden'}`} aria-hidden={!exterior}>
-      HAZ SCROLL PARA ENTRAR A LA CABINA
+      <span>
+        MANTÉN <kbd>W</kbd> PARA ENTRAR A LA CABINA
+      </span>
+      <span className="scroll-hint-sub">o haz scroll · <kbd>S</kbd> retrocede · <kbd>M</kbd> sonido</span>
       <span className="scroll-hint-arrow" aria-hidden="true">▼</span>
     </div>
   );

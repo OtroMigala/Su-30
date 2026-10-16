@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "inspect:glb": "node tools/inspect-glb.mjs assets-src/su30.glb",
-    "optimize:glb": "node tools/optimize-glb.mjs"
+    "optimize:glb": "node tools/optimize-glb.mjs",
+    "sounds": "node tools/process-sounds.mjs"
   },
   "dependencies": {
     "@react-three/drei": "10.7.9",

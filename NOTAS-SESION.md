@@ -31,7 +31,9 @@ comentar el porqué de cada técnica, sobre todo la matemática y la física (el
 - Para elegir versiones se consultó `npm view <pkg> time`; ojo, ordenar por semver falla con three (aparece una "1.58.1" antigua): ordenar por fecha.
 - Licencias: sólo MIT, Apache-2.0, BSD, ISC, Zlib, CC0, CC BY (y GSAP Standard License, permitida en CLAUDE.md).
   El autor **aceptó** (2026-10-15) las herramientas de build con MPL-2.0 (lightningcss, dentro de Vite), LGPL-3.0 (binario de sharp)
-  y BlueOak-1.0.0 (gltf-transform); ninguna se distribuye. Cualquier otra licencia nueva: preguntar antes.
+  y BlueOak-1.0.0 (gltf-transform); ninguna se distribuye. También aceptó (2026-10-15) ffmpeg como herramienta de build
+  y la **Pixabay Content License** para dos sonidos, con la condición de no subir los originales a git.
+  Cualquier otra licencia nueva: preguntar antes.
 - Las skills oficiales de GSAP (`greensock/gsap-skills`) no estaban disponibles; se usa la documentación.
 
 ## Modelo 3D y pipeline
@@ -103,6 +105,19 @@ comentar el porqué de cada técnica, sobre todo la matemática y la física (el
   Brillo con extinción de Beer–Lambert e^(−d/22 km).
 - `FlightReadout.tsx`: lectura provisional (HDG, ALT, BANK, G, γ) escrita por rAF a 10 Hz; **la fase 3 la sustituye por el HUD**.
   `ScrollHint.tsx`: indicación en el exterior.
+
+## Controles W/S y sonido (añadido tras la fase 2, a petición del autor)
+
+- W/S (KeyboardEvent.code, físico) mueven el MISMO scroll: `setThrottleDir` en `scroll.ts`. Velocidad de crucero 1 tramo / 3.5 s,
+  aceleración con damp λ = 1.8. Al soltar: planeo con deceleración constante (`power1.out`, T = 2d/v₀) hasta el siguiente waypoint
+  en la dirección de avance; nunca retrocede. La rueda y el táctil siguen funcionando (snap al más cercano) y cancelan el planeo.
+  Decisiones del autor: W/S principal + rueda; al soltar, siguiente waypoint.
+- `src/input/keyboard.ts`: W, S, M (silencio, guardado en localStorage). Las teclas de la fase 3 (Q/E/Enter/1–6) van aquí.
+- `src/audio/engine.ts`: Web Audio. Ambiente en bucle a volumen 0.16 siempre; con W/S, arranque (spool) y a los 2.2 s fundido
+  de 1 s al empuje en bucle; al soltar, decae con τ = 0.25 s; si se vuelve a acelerar en < 1.5 s no se repite el arranque.
+  El AudioContext se crea en la primera tecla o clic (política de autoplay). Botón `SoundToggle` (SND ON/OFF).
+- Sonidos: originales en `assets-src/sounds/` (en .gitignore) → `npm run sounds` (necesita ffmpeg; winget Gyan.FFmpeg, o variable FFMPEG)
+  → `public/sounds/{ambient,spool,thrust}.{webm,mp3}` (Opus 64k + MP3 96k, mono, loudnorm −18 LUFS). Cortes justificados en el script.
 - Aviso inofensivo en consola: "THREE.Clock deprecated" viene de R3F, no del proyecto.
 
 ## Cómo se verificó visualmente (no hay GPU en las pruebas automáticas)

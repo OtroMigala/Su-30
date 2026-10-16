@@ -5,3 +5,7 @@ dist
 .vite
 .DS_Store
 Thumbs.db
+
+# Sonidos originales: la licencia de Pixabay prohíbe redistribuirlos tal cual.
+# Sólo se publican las versiones procesadas (public/sounds) que genera npm run sounds.
+assets-src/sounds/

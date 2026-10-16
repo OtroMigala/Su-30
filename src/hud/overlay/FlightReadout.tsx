@@ -42,6 +42,7 @@ export function FlightReadout() {
         WPT {section}/{N - 1} {s.code} · {s.label}
       </div>
       <pre ref={ref} />
+      <div className="readout-keys">W avanzar · S retroceder · M sonido</div>
     </div>
   );
 }
