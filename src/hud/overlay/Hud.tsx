@@ -7,6 +7,7 @@ import { KeysHelp } from './KeysHelp';
 import { Radar } from './Radar';
 import { WeaponMenu } from './WeaponMenu';
 import { LookControls } from './LookControls';
+import { MobileNav } from './MobileNav';
 import { radio } from './radioQueue';
 
 /**
@@ -43,6 +44,7 @@ export function Hud() {
       <Radar />
       <WeaponMenu />
       <LookControls />
+      <MobileNav />
     </div>
   );
 }

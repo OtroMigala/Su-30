@@ -8,6 +8,7 @@ import { goToSection } from '../flight/scroll';
 import { worldDir } from '../hud/combiner/projection';
 import { addPickable } from '../input/picking';
 import { radio } from '../hud/overlay/radioQueue';
+import { EMISSIVE_GAIN } from './Effects';
 
 /** Radio de la esfera sobre la que se dibujan (m): lejos de la cabina, dentro del plano lejano. */
 const R = 900;
@@ -25,7 +26,7 @@ function makeLabel(i: number) {
   canvas.height = CH;
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
-  const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false, toneMapped: false });
+  const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false, color: new THREE.Color().setScalar(EMISSIVE_GAIN) });
   const sprite = new THREE.Sprite(material);
   sprite.center.set(BOX_CX / CW, 0.5);
   sprite.visible = false;

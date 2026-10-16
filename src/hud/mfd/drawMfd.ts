@@ -231,13 +231,26 @@ export function drawMfd(ctx: CanvasRenderingContext2D, m: MfdModel): MfdRegion[]
       line('Clic en un enlace para abrirlo', DIM);
       break;
 
-    case 'credits':
-      for (const l of CONTENT.credits) for (const w of wrap(ctx, l.trim(), W - (l.startsWith('  ') ? 40 : 0))) {
-        ctx.fillStyle = GREEN;
-        ctx.fillText(w, X0 + (l.startsWith('  ') ? 40 : 0), y);
-        y += LH;
-      }
+    case 'credits': {
+      // Letra algo menor: son 8 entradas que deben caber sin desplazarse. Las que tienen enlace se
+      // subrayan y se pueden pulsar (se abren en otra pestaña).
+      ctx.font = `22px ${FONT}`;
+      const lh = 31;
+      CONTENT.credits.forEach((c, k) => {
+        const id = `cred${k}`;
+        const lines = wrap(ctx, c.text, W);
+        const top = y - lh / 2;
+        lines.forEach((l) => {
+          ctx.fillStyle = c.href && hot(id) ? '#ffffff' : GREEN;
+          ctx.fillText(l, X0, y);
+          if (c.href) ctx.fillRect(X0, y + 13, ctx.measureText(l).width, hot(id) ? 3 : 1);
+          y += lh;
+        });
+        if (c.href) regions.push({ id, x: X0 - 6, y: top, w: W + 12, h: lines.length * lh, action: { kind: 'link', href: c.href } });
+        y += 8;
+      });
       break;
+    }
   }
   ctx.globalAlpha = 1;
 

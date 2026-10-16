@@ -8,6 +8,7 @@ import { enterFocus } from '../../input/look';
 import { addPickable } from '../../input/picking';
 import { radio } from '../overlay/radioQueue';
 import { MFD_SIZE, drawMfd, type MfdAction, type MfdRegion } from './drawMfd';
+import { EMISSIVE_GAIN } from '../../scene/Effects';
 
 const REVEAL_TIME = 0.35; // s, aparición del contenido al cambiar de página
 const CAUTION_TIME = 3; // s de parpadeo (6 ciclos de 0.5 s, como el prototipo)
@@ -39,9 +40,9 @@ export function Mfd({ mesh }: { mesh: THREE.Mesh }) {
 
   useEffect(() => {
     const prev = mesh.material;
-    // toneMapped: false → los colores del canvas llegan a pantalla tal cual (es una pantalla
-    // emisora, no una superficie iluminada).
-    const material = new THREE.MeshBasicMaterial({ map: tex.texture, toneMapped: false });
+    // Pantalla emisora: sin iluminación (MeshBasic) y con ganancia HDR, algo menor que la del HUD
+    // para que el texto pequeño no se emborrone con el bloom (ver Effects.tsx).
+    const material = new THREE.MeshBasicMaterial({ map: tex.texture, color: new THREE.Color().setScalar(EMISSIVE_GAIN * 0.7) });
     mesh.material = material;
 
     const reduced = prefersReducedMotion();

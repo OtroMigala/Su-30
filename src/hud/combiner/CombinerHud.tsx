@@ -5,6 +5,8 @@ import { rig, useFlight } from '../../store/flight';
 import type { CockpitRefs } from '../../scene/cockpit';
 import { attitudeQuaternion, boundsFromPoints, type HudRect } from './projection';
 import { drawHud } from './draw';
+import { cockpitFov } from '../../scene/fov';
+import { EMISSIVE_GAIN } from '../../scene/Effects';
 
 /**
  * Escala del combinador respecto al modelo. El vidrio real abarca ~15° × 12° desde los ojos del
@@ -116,10 +118,10 @@ export function CombinerHud({ cockpit, root }: { cockpit: CockpitRefs; root: THR
   // Canvas con tantos texels como píxeles de pantalla ocupa el vidrio (ni más, que se desperdicia
   // memoria y ancho de banda, ni menos, que se ve borroso).
   // Píxeles de pantalla por unidad de tangente: en una cámara perspectiva, tan(fov/2) ocupa media
-  // altura de la ventana ⇒ (alto/2) / tan(fov/2). Se usa el FOV de la cabina (62°).
+  // altura de la ventana ⇒ (alto/2) / tan(fov/2). Se usa el FOV de la cabina (fov.ts), que depende de la proporción de la ventana.
   const tex = useMemo(() => {
     if (!rect) return null;
-    const pxPerTan = size.height / 2 / Math.tan((62 * Math.PI) / 360);
+    const pxPerTan = size.height / 2 / Math.tan((cockpitFov(size.width / size.height) * Math.PI) / 360);
     const want = (rect.x1 - rect.x0) * pxPerTan * dprNow;
     const k = Math.min(1, MAX_TEXELS / want) * dprNow; // texels por píxel CSS
     const w = Math.round((rect.x1 - rect.x0) * pxPerTan * k);
@@ -132,17 +134,18 @@ export function CombinerHud({ cockpit, root }: { cockpit: CockpitRefs; root: THR
     texture.generateMipmaps = false; // se ve casi 1:1; los mipmaps costarían en cada subida
     texture.minFilter = THREE.LinearFilter;
     return { canvas, ctx: canvas.getContext('2d')!, texture, k };
-  }, [rect, size.height, dprNow]);
+  }, [rect, size.width, size.height, dprNow]);
   useEffect(() => () => tex?.texture.dispose(), [tex]);
 
   const material = useMemo(
     () =>
       new THREE.MeshBasicMaterial({
+        // Ganancia HDR: el proyector del HUD es una fuente de luz brillante (ver Effects.tsx).
+        color: new THREE.Color().setScalar(EMISSIVE_GAIN),
         transparent: true,
         blending: THREE.AdditiveBlending, // un combinador sólo suma luz
         depthTest: false, // el vidrio y la cabina están más cerca: la visibilidad la decide el stencil
         depthWrite: false,
-        toneMapped: false,
         stencilWrite: true, // en three activa la prueba de stencil
         stencilRef: 1,
         stencilFunc: THREE.EqualStencilFunc,
@@ -169,12 +172,15 @@ export function CombinerHud({ cockpit, root }: { cockpit: CockpitRefs; root: THR
   }, [rect, cockpit]);
 
   const attitude = useMemo(() => new THREE.Quaternion(), []);
+  const frame = useRef(0);
   useFrame(() => {
     const m = mesh.current;
     if (!m || !tex || !rect) return;
     // Sólo dentro de la cabina (desde fuera también se vería a través del vidrio).
     m.visible = rig.enter > 0.9;
     if (!m.visible) return;
+    // Calidad baja: se redibuja (y se sube a la GPU) un fotograma de cada dos, ~30 Hz.
+    if (useFlight.getState().quality === 'low' && frame.current++ % 2) return;
     const f = rig.flight;
     attitudeQuaternion(f.pitch, f.roll, attitude);
     drawHud({ ctx: tex.ctx, w: tex.canvas.width, h: tex.canvas.height, rect, k: tex.k }, f, attitude, useFlight.getState().declutter);

@@ -57,7 +57,21 @@ function SectionText({ id }: { id: string }) {
         </ul>
       );
     case 'credits':
-      return <p>{CONTENT.credits.map((l) => l.trim()).join(' ')}</p>;
+      return (
+        <ul>
+          {CONTENT.credits.map((c) => (
+            <li key={c.text}>
+              {c.href ? (
+                <a href={c.href} target="_blank" rel="noopener noreferrer">
+                  {c.text}
+                </a>
+              ) : (
+                c.text
+              )}
+            </li>
+          ))}
+        </ul>
+      );
     default:
       return <p>{CONTENT.sections[0]!.radio[1]}</p>;
   }

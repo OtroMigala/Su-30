@@ -12,7 +12,7 @@ const COUNTS: Record<string, string> = {
   projects: pad(CONTENT.projects.length),
   skills: pad(CONTENT.skills.length),
   contact: pad(CONTENT.contact.length),
-  credits: '01',
+  credits: pad(CONTENT.credits.length),
 };
 
 /**

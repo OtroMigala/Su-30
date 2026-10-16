@@ -18,7 +18,8 @@ descubrió trabajando, para retomar en otro PC sin perder contexto. Última actu
 | 4 HUD del combinador con stencil | hecha | (commit de la fase 4) |
 | 5 Vista libre (F) y modo focus | hecha | (commit de la fase 5) |
 | 6 MFD interactivo con raycast y objetivos 3D | hecha | (commit de la fase 6) |
-| 7 Post-procesado, optimización, móvil, accesibilidad, créditos | **siguiente** | |
+| 7 Post-procesado, optimización, móvil, accesibilidad, créditos | hecha | (commit de la fase 7) |
+| Extra propuesto: modo de vuelo con control manual | idea | |
 
 Forma de trabajo pedida: antes de cada fase, explicar el enfoque en pocas líneas (comparando opciones
 y recomendando una); al final, detenerse, explicar cómo probarla y hacer commit. Responder en español y
@@ -190,6 +191,24 @@ comentar el porqué de cada técnica, sobre todo la matemática y la física (el
 - Store: `selProject`, `lockId`, `declutter` (DCL: el HUD omite la escalera), `theme` ('night' | 'dawn'); `rig.dawn` lo
   suaviza Sky.tsx (cúpula, bruma, estrellas al 35 %) y lo usa GroundLights (brillo × 0.55).
 - Se eliminó la textura provisional del MFD de cockpit.ts.
+
+## Arquitectura añadida (fase 7)
+
+- `src/scene/Effects.tsx`: EffectComposer (stencilBuffer, HalfFloat, MSAA 4 / 0 en calidad baja) con Bloom (mipmapBlur,
+  umbral 1) → ToneMapping ACES → Noise (grano; opacidad 0 con reduced motion). El composer pone el tone mapping del
+  renderer a None mientras está activo, por eso ACES va como efecto. Pantallas emisoras con `EMISSIVE_GAIN` = 1.7
+  (HUD, objetivos; MFD × 0.7) y luna × 3, todas con toneMapped por defecto (iguales con y sin composer).
+  Dev: `/?fx=0` quita el post-procesado; `/?debug` expone `window.__gl` (17 draw calls, 23k triángulos sin fx).
+- `Quality` (Experience): PerformanceMonitor → store.quality 'high'/'low' (dpr 1, sin MSAA, HUD a 30 Hz).
+  Canvas sin antialias nativo cuando hay composer; `role="img"` + aria-label.
+- `src/scene/fov.ts`: `cockpitFov(aspecto)` = máx(62°, el que da ≥ 36° horizontales); lo usan CameraRig, el focus y el
+  canvas del HUD.
+- `MobileNav` (≤ 760 px): ◀ sección ▶ con botones de 44 px.
+- Créditos estructurados (`CONTENT.credits` = {text, href}): MFD (enlaces pulsables) y texto accesible; `CREDITS.md`
+  final con auditoría de licencias de producción (todas MIT/Apache/ISC/Zlib/GSAP; Apache opcionales no entran al bundle).
+- Bundle: chunks three (187 KB gzip), r3f (105), react (64), motion (49), app (22). `chunkSizeWarningLimit` 800.
+  Pantalla de arranque estática en index.html (dentro de #root; React la reemplaza) y <noscript>.
+- Pendiente de medir en dispositivo real: fps en móvil de gama media (SwiftShader no sirve para eso).
 - Aviso inofensivo en consola: "THREE.Clock deprecated" viene de R3F, no del proyecto.
 
 ## Cómo se verificó visualmente (no hay GPU en las pruebas automáticas)
@@ -212,8 +231,5 @@ Fuente completa: `reference/cockpit-hud.html` (objeto `DATA` = contenido del sit
 
 ## Pendientes y avisos
 
-- Bundle de JS: 1.28 MB (363 KB gzip), casi todo three; revisar en la fase 7 (code-splitting, `PerformanceMonitor`).
 - Marco del canopy muy azul de noche (luna a través del cristal): se puede oscurecer en `Sky.tsx` (`lerp(1.6, 0.3, k)`).
 - Fuentes B612 vía Google Fonts (enlace en `index.html`); OFL permite autoalojarlas si se quiere funcionar sin conexión.
-- `CREDITS.md` está en borrador; se completa en la fase 7 junto con la página de créditos.
-- Modo móvil en vertical: FOV vertical fijo de 62° deja poco ancho; tratar en la fase 7.

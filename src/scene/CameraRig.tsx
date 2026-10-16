@@ -5,6 +5,7 @@ import { rig, useFlight } from '../store/flight';
 import { prefersReducedMotion } from '../flight/scroll';
 import { damp } from '../flight/route';
 import type { CockpitRefs } from './cockpit';
+import { cockpitFov } from './fov';
 
 // --- Parámetros de la órbita exterior (metros, en el espacio del avión) ---
 const ORBIT_RADIUS = 24;  // con 24 m y FOV 38° se ve entero el avión (22.6 m de largo)
@@ -22,7 +23,6 @@ const APPROACH = new THREE.Vector3(0, 3.4, 3.6);
 const COCKPIT_PITCH = -8;
 
 const FOV_EXTERIOR = 38;
-const FOV_COCKPIT = 62; // el prototipo usa 62° de FOV vertical
 
 // --- Cabeza del piloto (vista libre) ---
 // La cabeza no gira alrededor de los ojos sino del cuello (la articulación atlanto-occipital y las
@@ -69,6 +69,7 @@ function mfdFrame(mfd: THREE.Mesh, root: THREE.Object3D, pilotPos: THREE.Vector3
  * es decir, bajando hacia los ojos del piloto a través del cristal (transparente), sin
  * cruzar el fuselaje opaco, que sí atravesaría una línea recta desde la órbita.
  *
+ * El FOV de la cabina depende de la proporción de la ventana (fov.ts).
  * Dentro de la cabina se le suman la cabeza (vista libre) y el acercamiento al MFD (focus).
  */
 export function CameraRig({ cockpit, root }: { cockpit: CockpitRefs; root: THREE.Object3D }) {
@@ -101,7 +102,7 @@ export function CameraRig({ cockpit, root }: { cockpit: CockpitRefs; root: THREE
     if (!cockpit.mfd) return null;
     const f = mfdFrame(cockpit.mfd, root, cockpit.pilotPos);
     return { ...f, at: (aspect: number) => {
-      const t = Math.tan((FOV_COCKPIT / 2) * DEG) * Math.min(1, aspect);
+      const t = Math.tan((cockpitFov(aspect) / 2) * DEG) * Math.min(1, aspect);
       return f.center.clone().addScaledVector(f.normal, f.side / 2 / (FOCUS_FILL * t));
     } };
   }, [cockpit, root]);
@@ -177,7 +178,7 @@ export function CameraRig({ cockpit, root }: { cockpit: CockpitRefs; root: THREE
     camera.quaternion.copy(tmp.q);
 
     // El zoom "se abre" al entrar: lente de 38° (tele, para ver el avión) → 62° (visión humana en cabina).
-    const fov = THREE.MathUtils.lerp(FOV_EXTERIOR, FOV_COCKPIT, smoothstep(0.3, 1, t));
+    const fov = THREE.MathUtils.lerp(FOV_EXTERIOR, cockpitFov(state.size.width / state.size.height), smoothstep(0.3, 1, t));
     if (Math.abs(fov - camera.fov) > 1e-3) {
       camera.fov = fov;
       camera.updateProjectionMatrix();

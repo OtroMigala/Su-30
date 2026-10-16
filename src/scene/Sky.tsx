@@ -33,6 +33,7 @@ const MOON_DIR = new THREE.Vector3(
 // Tamaño aparente: un disco de radio r a distancia D subtiende un ángulo θ con tan θ = r/D.
 // La luna real mide 0.26°; la exageramos a 1.4° para que se aprecie en un FOV de 62°.
 const MOON_RADIUS = MOON_DISTANCE * Math.tan(1.4 * DEG);
+const MOON_COLOR = new THREE.Color('#e9eefc').multiplyScalar(3);
 
 // ---- Tema: noche ⇄ amanecer (paletas del prototipo, tokens --sky-top, --sky-mid, --horizon...) ----
 const THEME: [string, THREE.Color, THREE.Color][] = [
@@ -214,11 +215,12 @@ export function Sky() {
         <group position={MOON_DIR.clone().multiplyScalar(MOON_DISTANCE)}>
           <mesh renderOrder={-800}>
             <sphereGeometry args={[MOON_RADIUS, 24, 16]} />
-            <meshBasicMaterial color="#e9eefc" toneMapped={false} />
+            {/* Color × 3 en HDR: la luna es lo más brillante del cielo y así el bloom la hace brillar. */}
+            <meshBasicMaterial color={MOON_COLOR} />
           </mesh>
           {/* Resplandor: un sprite (siempre de cara a la cámara) con degradado radial, suma luz. */}
           <sprite scale={[MOON_RADIUS * 14, MOON_RADIUS * 14, 1]} renderOrder={-850}>
-            <spriteMaterial map={halo} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+            <spriteMaterial map={halo} blending={THREE.AdditiveBlending} depthWrite={false} />
           </sprite>
         </group>
       </group>

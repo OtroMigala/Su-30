@@ -452,6 +452,38 @@ body.looking {
   outline-offset: 2px;
 }
 
+/* Navegación compacta (sólo en pantallas estrechas) */
+.mnav {
+  display: none;
+  position: absolute;
+  right: calc(env(safe-area-inset-right, 0px) + 12px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-shadow: var(--glow);
+}
+.mnav button {
+  min-width: 44px;
+  min-height: 44px;
+  background: rgba(2, 12, 6, 0.55);
+  border: 1px solid var(--hud);
+  color: var(--hud);
+  font: inherit;
+  cursor: pointer;
+}
+.mnav button:disabled {
+  opacity: 0.35;
+}
+.mnav button:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+.hud.focus .mnav {
+  display: none;
+}
+
 /* Pantallas estrechas (móvil): sin teclado, menos espacio. */
 @media (max-width: 760px) {
   .keys,
@@ -460,6 +492,9 @@ body.looking {
   }
   .lookbtn {
     display: block;
+  }
+  .mnav {
+    display: flex;
   }
   .radio {
     width: 88vw;

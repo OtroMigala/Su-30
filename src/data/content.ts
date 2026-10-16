@@ -71,12 +71,18 @@ export const CONTENT = {
     ['GITHUB', 'github.com/tu-usuario', 'https://github.com/'],
     ['LINKEDIN', 'linkedin.com/in/tu-usuario', 'https://www.linkedin.com/'],
   ] as readonly (readonly [string, string, string])[],
+  // Créditos con enlace (opcional). CC BY pide título, autor, fuente y licencia ("TASL") y que se
+  // indiquen los cambios. Más detalle en CREDITS.md.
   credits: [
-    'Modelo "Su-30 MKI loadout#1 [Brahmos]"',
-    '  por abhinab.das000 (Sketchfab), CC BY 4.0.',
-    'Tipografía B612 de Airbus, SIL Open Font License.',
-    'Animación con GSAP y ScrollTrigger.',
-    'Interfaz inspirada en la saga Ace Combat',
-    '  (Bandai Namco). Proyecto sin fines comerciales.',
-  ],
+    { text: 'Modelo "Su-30 MKI loadout#1 [Brahmos]" de abhinab.das000, editado (cabina, HUD, MFD) y optimizado.',
+      href: 'https://sketchfab.com/3d-models/su-30-mki-loadout1-brahmos-e9b810ba081544d0997ad8cce4b95fc8' },
+    { text: 'Licencia del modelo: CC BY 4.0.', href: 'https://creativecommons.org/licenses/by/4.0/' },
+    { text: 'Sonido de arranque: "Jet engine startup" de SamsterBirdies (CC0), recortado.',
+      href: 'https://freesound.org/people/samsterbirdies/sounds/491407/' },
+    { text: 'Ambiente y empuje: Pixabay (Pixabay Content License), editados.', href: 'https://pixabay.com/service/license-summary/' },
+    { text: 'Tipografía B612 de Airbus (SIL Open Font License 1.1).', href: 'https://github.com/polarsys/b612' },
+    { text: 'GSAP y ScrollTrigger (GSAP Standard License).', href: 'https://gsap.com/standard-license' },
+    { text: 'three.js, React, React Three Fiber, drei, Lenis y Zustand (MIT); postprocessing (Zlib).' },
+    { text: 'Interfaz inspirada en la saga Ace Combat (Bandai Namco). Sin fines comerciales ni afiliación.' },
+  ] as readonly { text: string; href?: string }[],
 };

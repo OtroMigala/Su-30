@@ -25,6 +25,8 @@ interface FlightStore {
   declutter: boolean;
   /** D/N: cielo nocturno o de amanecer (como el tema claro/oscuro del prototipo). */
   theme: 'night' | 'dawn';
+  /** Calidad gráfica: la baja PerformanceMonitor si los fps caen. */
+  quality: 'high' | 'low';
   setReady: (ready: boolean) => void;
   setCamMode: (mode: CamMode) => void;
   setSection: (section: number) => void;
@@ -34,6 +36,7 @@ interface FlightStore {
   setLockId: (i: number) => void;
   setDeclutter: (on: boolean) => void;
   setTheme: (t: 'night' | 'dawn') => void;
+  setQuality: (q: 'high' | 'low') => void;
 }
 
 // Estado "reactivo": sólo lo que la interfaz HTML necesita redibujar (cambia pocas veces).
@@ -49,6 +52,7 @@ export const useFlight = create<FlightStore>((set, get) => ({
   lockId: -1,
   declutter: false,
   theme: 'night',
+  quality: 'high',
   setReady: (ready) => set({ ready }),
   setCamMode: (camMode) => get().camMode !== camMode && set({ camMode }),
   // Al llegar a una sección, el cursor del menú salta a ella (como en el prototipo).
@@ -58,6 +62,7 @@ export const useFlight = create<FlightStore>((set, get) => ({
   setLockId: (lockId) => get().lockId !== lockId && set({ lockId }),
   setDeclutter: (declutter) => set({ declutter }),
   setTheme: (theme) => set({ theme }),
+  setQuality: (quality) => get().quality !== quality && set({ quality }),
   setMuted: (muted) => {
     set({ muted });
     try {
