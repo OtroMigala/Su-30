@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { CameraRig } from './CameraRig';
+import { CombinerHud } from '../hud/combiner/CombinerHud';
 import { prepareCockpit } from './cockpit';
 import { rig } from '../store/flight';
 import { DEG, stepFlight } from '../flight/route';
@@ -52,6 +53,7 @@ export function Aircraft() {
     <group name="aircraft" ref={group}>
       <primitive object={scene} />
       <CameraRig cockpit={cockpit} />
+      <CombinerHud cockpit={cockpit} root={scene} />
       {/* Luz tenue dentro de la cabina: sin ella el asiento y los laterales son negro puro.
           No pretende ser realista, sólo que se distinga la estructura. */}
       <pointLight position={[0, 1.7, 5.2]} color="#7fb0ff" intensity={0.6} distance={3} decay={2} />

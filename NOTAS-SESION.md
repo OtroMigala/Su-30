@@ -15,8 +15,9 @@ descubrió trabajando, para retomar en otro PC sin perder contexto. Última actu
 | 1 Escena nocturna, avión, entrada a la cabina | hecha | `5dfb5a4` |
 | 2 Ruta de vuelo y scroll (waypoints, snap, alabeo, tests de `route.ts`) | hecha | (commit de la fase 2) |
 | 3 HUD en pantalla portado del prototipo | hecha | (commit de la fase 3) |
-| 4 HUD del combinador con stencil | **siguiente** | |
-| 5–7 | pendientes | |
+| 4 HUD del combinador con stencil | hecha | (commit de la fase 4) |
+| 5 Vista libre (F) y modo focus | **siguiente** | |
+| 6–7 | pendientes | |
 
 Forma de trabajo pedida: antes de cada fase, explicar el enfoque en pocas líneas (comparando opciones
 y recomendando una); al final, detenerse, explicar cómo probarla y hacer commit. Responder en español y
@@ -138,6 +139,25 @@ comentar el porqué de cada técnica, sobre todo la matemática y la física (el
 - `FlightReadout` ya sólo con `/?debug` en desarrollo. Mensaje de radio inicial cambiado a "Mantén W para despegar...".
 - Pendiente para fases siguientes: cintas/escalera/NEXT (4), MIRAR/HEAD FREE (5), objetivos 3D, MFD y MASTER CAUTION (6),
   menú y radar en móvil (7: el prototipo los oculta por debajo de 760/500 px).
+
+## Arquitectura añadida (fase 4)
+
+- Medidas con rayos desde `cam_pilot` (y = 1.243; ojo: 10.7 cm más bajo que los 1.35 del modelo original):
+  arco del parabrisas (`Object_8`) de +2° a +9.5° a 0.74 m; combinador de +0.75° a −9.25° (±7.6° de ancho) a 0.74 m;
+  soportes del HUD (`Object_11`, opacos) en |az| 6.5–7.5° a 0.70–0.85 m; antepecho bajo −9.25° (centro) / −14.5° (lados).
+  La línea de mira (0°) queda justo bajo el arco.
+- `src/hud/combiner/projection.ts` (+ tests): cuaternión de actitud (mismo Euler que Aircraft.tsx), `worldDir`, `toBody`,
+  proyección gnomónica (`gnomonic`, `projectWorld`) y `boundsFromPoints`. 32 tests en total.
+- `CombinerHud.tsx`: el propio `hud_combiner` (material clonado) escribe stencil = 1 donde pasa la profundidad; un plano a
+  1000 m (hijo del avión, perpendicular a la nariz) con CanvasTexture, `depthTest:false`, mezcla aditiva y stencil EQUAL.
+  `gl.stencil = true` en el Canvas (three lo desactiva por defecto desde r163). **Fase 7: EffectComposer con stencilBuffer.**
+  El canvas mide lo que ocupa el vidrio en pantalla × dpr (máx. 2048) y se redibuja/sube cada fotograma. Visible si enter > 0.9.
+- Escala: `COMBINER_SCALE = 2` (alrededor del centro del vidrio) y `COMBINER_PUSH = 1.8` (escala alrededor del OJO: mismo ángulo,
+  más lejos, para que el arco y los soportes lo tapen). En dev: `/?hud=1.6&push=1.5`. Con escala 1 el HUD mide ~200 px en 1080p.
+- `draw.ts`: conformes (escalera con peldaños orientados proyectando dos puntos, horizonte, FPM a γ, nariz en (0,0), NEXT) y no
+  conformes colocados en grados (`LAYOUT`): rumbo abajo-centro (±20°), cintas en ±9°, Mach/G y waypoint por fuera de los
+  soportes en −9.6°; todo recortado por debajo de +2° (arco). Sin cajas negras: un combinador sólo suma luz.
+  Si se cambia mucho la escala o se reexporta la cabina, revisar `LAYOUT`.
 - Aviso inofensivo en consola: "THREE.Clock deprecated" viene de R3F, no del proyecto.
 
 ## Cómo se verificó visualmente (no hay GPU en las pruebas automáticas)

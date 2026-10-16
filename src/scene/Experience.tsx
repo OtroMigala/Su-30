@@ -31,7 +31,9 @@ export function Experience() {
       className="stage"
       // dpr máximo 2 (CLAUDE.md): a 3x un celular pintaría 2.25 veces más píxeles sin ganancia visible.
       dpr={[1, 2]}
-      gl={{ powerPreference: 'high-performance', antialias: true }}
+      // stencil: true → el HUD del combinador usa el stencil buffer como máscara. three.js lo trae
+      // desactivado por defecto desde r163 (ahorra memoria a quien no lo usa).
+      gl={{ powerPreference: 'high-performance', antialias: true, stencil: true }}
       // near=0.02: los paneles están a ~0.5 m; far=3000 contiene la cúpula (1500 m).
       camera={{ fov: 38, near: 0.02, far: 3000, position: [0, 4.5, 24] }}
     >

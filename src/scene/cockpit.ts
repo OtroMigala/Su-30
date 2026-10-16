@@ -9,8 +9,10 @@ const FALLBACK = {
 export interface CockpitRefs {
   /** Ojos del piloto (cam_pilot) en el espacio del avión, en metros. */
   pilotPos: THREE.Vector3;
-  /** Centro del vidrio del HUD (hud_anchor). Lo usará la fase 4. */
+  /** Centro del vidrio del HUD (hud_anchor). */
   hudAnchor: THREE.Vector3;
+  /** Vidrio del HUD: máscara de stencil de la simbología (hud/combiner). */
+  combiner: THREE.Mesh | undefined;
   /** Piloto delantero: se oculta en primera persona porque la cámara está dentro de su cabeza. */
   pilotFront: THREE.Object3D | undefined;
   mfd: THREE.Mesh | undefined;
@@ -58,7 +60,7 @@ export function prepareCockpit(scene: THREE.Object3D): CockpitRefs {
     const m = combiner.material as THREE.MeshStandardMaterial;
     m.depthWrite = false;
     // El GLB lo trae negro al 50 %, que apagaría el horizonte justo donde irá el HUD.
-    // Un combinador real es casi transparente. La fase 4 lo convierte en máscara de stencil.
+    // Un combinador real es casi transparente. CombinerHud lo convierte en máscara de stencil.
     m.opacity = 0.12;
   }
 
@@ -72,7 +74,8 @@ export function prepareCockpit(scene: THREE.Object3D): CockpitRefs {
     mfd.renderOrder = 3;
   }
 
-  return { pilotPos, hudAnchor, pilotFront: scene.getObjectByName('pilot_front'), mfd };
+  if (!combiner) console.warn('[cabina] Falta "hud_combiner" en el GLB: el HUD del combinador no se dibujará.');
+  return { pilotPos, hudAnchor, combiner, pilotFront: scene.getObjectByName('pilot_front'), mfd };
 }
 
 // ---------------------------------------------------------------------------------------
