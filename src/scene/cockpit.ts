@@ -15,6 +15,7 @@ export interface CockpitRefs {
   combiner: THREE.Mesh | undefined;
   /** Piloto delantero: se oculta en primera persona porque la cámara está dentro de su cabeza. */
   pilotFront: THREE.Object3D | undefined;
+  /** Pantalla multifunción: hud/mfd/Mfd.tsx le pone la textura del contenido. */
   mfd: THREE.Mesh | undefined;
 }
 
@@ -67,10 +68,6 @@ export function prepareCockpit(scene: THREE.Object3D): CockpitRefs {
   const mfd = scene.getObjectByName('mfd_main') as THREE.Mesh | undefined;
   if (mfd) {
     if (MFD_AUTOFIX && !orientation(mfd, pilotPos).facesPilot) fixMfd(mfd, pilotPos);
-    if (!mfd.userData.placeholder) {
-      mfd.material = createMfdPlaceholder();
-      mfd.userData.placeholder = true;
-    }
     mfd.renderOrder = 3;
   }
 
@@ -138,7 +135,7 @@ function orientation(mfd: THREE.Mesh, pilotPos: THREE.Vector3) {
  *   Dejar el plano como está, material de doble cara y espejar la textura:
  *     material.side = THREE.DoubleSide;
  *     texture.repeat.x = -1; texture.offset.x = 1;
- *   Funciona, pero el raycast del MFD (fase 6) tendría que deshacer el espejo a mano.
+ *   Funciona, pero el raycast del MFD tendría que deshacer el espejo a mano.
  */
 function fixMfd(mfd: THREE.Mesh, pilotPos: THREE.Vector3) {
   // 1) Giro de 180° sobre Z local alrededor del centro de la geometría: M' = M · T(c) · Rz(π) · T(−c)
@@ -166,49 +163,4 @@ function fixMfd(mfd: THREE.Mesh, pilotPos: THREE.Vector3) {
   const o = orientation(mfd, pilotPos);
   console.info('[cabina] mfd_main corregido por código. Corrígelo en Blender (ver cockpit.ts).', o);
   if (!o.facesPilot || o.mirrored || o.upsideDown) console.warn('[cabina] mfd_main sigue mal orientado tras el arreglo:', o);
-}
-
-/**
- * Textura provisional del MFD: una rejilla con rótulos para comprobar a simple vista
- * que no sale espejada ni al revés. La fase 6 la sustituye por el contenido real.
- *
- * IMPORTANTE: flipY = false. glTF define v=0 en el borde SUPERIOR de la imagen, y los
- * CanvasTexture traen flipY=true por defecto (convención OpenGL, v=0 abajo). Con flipY=false,
- * la coordenada UV (u, v) del raycast se traduce al canvas directamente: x = u·ancho, y = v·alto.
- */
-function createMfdPlaceholder() {
-  const S = 512;
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = S;
-  const g = canvas.getContext('2d')!;
-  g.fillStyle = '#031208';
-  g.fillRect(0, 0, S, S);
-  g.strokeStyle = 'rgba(141,255,160,.25)';
-  g.lineWidth = 1;
-  for (let i = 0; i <= S; i += 64) {
-    g.beginPath(); g.moveTo(i, 0); g.lineTo(i, S); g.moveTo(0, i); g.lineTo(S, i); g.stroke();
-  }
-  g.strokeStyle = '#8dffa0';
-  g.lineWidth = 4;
-  g.strokeRect(6, 6, S - 12, S - 12);
-  g.fillStyle = '#8dffa0';
-  g.textAlign = 'center';
-  g.font = "bold 44px 'B612 Mono', monospace";
-  g.fillText('MFD', S / 2, S / 2 - 10);
-  g.font = "24px 'B612 Mono', monospace";
-  g.fillText('fase 6: contenido', S / 2, S / 2 + 28);
-  g.textAlign = 'left';
-  g.fillText('▲ ARRIBA', 20, 46);
-  g.fillText('IZQ', 20, S - 20);
-  g.textAlign = 'right';
-  g.fillText('DER', S - 20, S - 20);
-  // Un triángulo en la esquina (u,v) = (0,0): si lo ves arriba a la izquierda, la UV es correcta.
-  g.beginPath(); g.moveTo(10, 60); g.lineTo(10, 110); g.lineTo(60, 60); g.closePath(); g.fill();
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.flipY = false;
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 8;
-  // toneMapped:false → los colores del canvas llegan a pantalla tal cual, sin pasar por ACES.
-  return new THREE.MeshBasicMaterial({ map: texture, toneMapped: false });
 }

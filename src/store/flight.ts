@@ -17,11 +17,23 @@ interface FlightStore {
   muted: boolean;
   /** Cursor del menú tipo selector de armas (Q/E lo mueven, Enter vuela ahí). */
   menuSel: number;
+  /** Proyecto cuya ficha muestra el MFD. */
+  selProject: number;
+  /** Objetivo fijado con el cursor (−1 = ninguno). */
+  lockId: number;
+  /** DCL: HUD simplificado (sin escalera de cabeceo). */
+  declutter: boolean;
+  /** D/N: cielo nocturno o de amanecer (como el tema claro/oscuro del prototipo). */
+  theme: 'night' | 'dawn';
   setReady: (ready: boolean) => void;
   setCamMode: (mode: CamMode) => void;
   setSection: (section: number) => void;
   setMuted: (muted: boolean) => void;
   setMenuSel: (i: number) => void;
+  setSelProject: (i: number) => void;
+  setLockId: (i: number) => void;
+  setDeclutter: (on: boolean) => void;
+  setTheme: (t: 'night' | 'dawn') => void;
 }
 
 // Estado "reactivo": sólo lo que la interfaz HTML necesita redibujar (cambia pocas veces).
@@ -33,11 +45,19 @@ export const useFlight = create<FlightStore>((set, get) => ({
   section: 0,
   muted: readMuted(),
   menuSel: 0,
+  selProject: 0,
+  lockId: -1,
+  declutter: false,
+  theme: 'night',
   setReady: (ready) => set({ ready }),
   setCamMode: (camMode) => get().camMode !== camMode && set({ camMode }),
   // Al llegar a una sección, el cursor del menú salta a ella (como en el prototipo).
   setSection: (section) => get().section !== section && set({ section, menuSel: section }),
   setMenuSel: (menuSel) => get().menuSel !== menuSel && set({ menuSel }),
+  setSelProject: (selProject) => get().selProject !== selProject && set({ selProject }),
+  setLockId: (lockId) => get().lockId !== lockId && set({ lockId }),
+  setDeclutter: (declutter) => set({ declutter }),
+  setTheme: (theme) => set({ theme }),
   setMuted: (muted) => {
     set({ muted });
     try {
@@ -73,4 +93,6 @@ export const rig = {
   look: { yaw: 0, pitch: 0, tYaw: 0, tPitch: 0 },
   /** Transición al MFD: 0 = ojos del piloto, 1 = cámara frente a la pantalla. */
   focus: 0,
+  /** Mezcla del tema del cielo: 0 = noche, 1 = amanecer (D/N en el MFD). La suaviza Sky.tsx. */
+  dawn: 0,
 };

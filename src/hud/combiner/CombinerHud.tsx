@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { rig } from '../../store/flight';
+import { rig, useFlight } from '../../store/flight';
 import type { CockpitRefs } from '../../scene/cockpit';
 import { attitudeQuaternion, boundsFromPoints, type HudRect } from './projection';
 import { drawHud } from './draw';
@@ -177,7 +177,7 @@ export function CombinerHud({ cockpit, root }: { cockpit: CockpitRefs; root: THR
     if (!m.visible) return;
     const f = rig.flight;
     attitudeQuaternion(f.pitch, f.roll, attitude);
-    drawHud({ ctx: tex.ctx, w: tex.canvas.width, h: tex.canvas.height, rect, k: tex.k }, f, attitude);
+    drawHud({ ctx: tex.ctx, w: tex.canvas.width, h: tex.canvas.height, rect, k: tex.k }, f, attitude, useFlight.getState().declutter);
     tex.texture.needsUpdate = true; // sube el canvas a la GPU en este fotograma
   });
 

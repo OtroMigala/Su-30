@@ -17,8 +17,8 @@ descubrió trabajando, para retomar en otro PC sin perder contexto. Última actu
 | 3 HUD en pantalla portado del prototipo | hecha | (commit de la fase 3) |
 | 4 HUD del combinador con stencil | hecha | (commit de la fase 4) |
 | 5 Vista libre (F) y modo focus | hecha | (commit de la fase 5) |
-| 6 MFD interactivo con raycast y objetivos 3D | **siguiente** | |
-| 7 | pendiente | |
+| 6 MFD interactivo con raycast y objetivos 3D | hecha | (commit de la fase 6) |
+| 7 Post-procesado, optimización, móvil, accesibilidad, créditos | **siguiente** | |
 
 Forma de trabajo pedida: antes de cada fase, explicar el enfoque en pocas líneas (comparando opciones
 y recomendando una); al final, detenerse, explicar cómo probarla y hacer commit. Responder en español y
@@ -173,6 +173,23 @@ comentar el porqué de cada técnica, sobre todo la matemática y la física (el
   Raycast propio contra `mfd_main` en `click` (no pointerup: un arrastre no cuenta) y cursor de mano encima.
 - Overlay: HEAD FREE, botón MIRAR (≤ 760 px), VOLVER · ESC en focus; en focus se ocultan estado, radar, menú y ayuda.
 - Idea del autor para después de la fase 7: modo de vuelo con control manual del avión (alabeo/cabeceo a gusto).
+
+## Arquitectura añadida (fase 6)
+
+- `src/input/picking.ts`: registro de objetos pulsables (`addPickable`) con un único raycast por movimiento/clic contra
+  ellos (MFD + 4 sprites). Lo conecta `<Picking/>` en Experience. Clic sin impacto estando en focus → `release()`.
+  (Sustituye al raycast del MFD que había en CameraRig.)
+- `src/hud/mfd/drawMfd.ts`: canvas 1024² con OSB (izq.: secciones; der.: PRV, NXT, DCL, D/N, CAUT), contenido por sección
+  (port de renderScreen), scanlines y aparición en 4 escalones; devuelve las zonas pulsables. `Mfd.tsx`: material
+  MeshBasic sin tone mapping; redibuja sólo al cambiar algo (rAF bajo demanda); UV → canvas = (u·1024, v·1024) gracias a
+  flipY = false. Fuera de focus el clic acerca la cámara; en focus pulsa. ← → = PRV/NXT en focus. Enlaces con window.open.
+  PRV/NXT recorren proyectos en TGTS y secciones en el resto.
+- `src/scene/Targets.tsx`: sprites con recuadro + rótulo (canvas 320×96, redibujado sólo si cambia distancia/estado),
+  dirección real sobre una esfera de 900 m, 2.6° (2.0° fijado, rojo). Visibles cerca de PROJ (±0.85 tramos), |az| < 75°,
+  sólo en cockpit/free. Hover → lockId + radio AWACS; clic → selProject + vuela a PROJ.
+- Store: `selProject`, `lockId`, `declutter` (DCL: el HUD omite la escalera), `theme` ('night' | 'dawn'); `rig.dawn` lo
+  suaviza Sky.tsx (cúpula, bruma, estrellas al 35 %) y lo usa GroundLights (brillo × 0.55).
+- Se eliminó la textura provisional del MFD de cockpit.ts.
 - Aviso inofensivo en consola: "THREE.Clock deprecated" viene de R3F, no del proyecto.
 
 ## Cómo se verificó visualmente (no hay GPU en las pruebas automáticas)

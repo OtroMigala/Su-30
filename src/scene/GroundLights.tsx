@@ -69,6 +69,7 @@ const makeMaterial = () =>
       uTime: { value: 0 },
       uPixelRatio: { value: 1 },
       uTwinkle: { value: prefersReducedMotion() ? 0 : 1 },
+      uBright: { value: 1 },
       uTile: { value: TILE },
       uRadius: { value: PROJ_RADIUS },
       uWarm: { value: new THREE.Color(255 / 255, 200 / 255, 130 / 255) },
@@ -77,7 +78,7 @@ const makeMaterial = () =>
     vertexShader: /* glsl */ `
       attribute float aWarm, aPhase;
       uniform vec2 uPos;
-      uniform float uAlt, uTime, uPixelRatio, uTwinkle, uTile, uRadius;
+      uniform float uAlt, uTime, uPixelRatio, uTwinkle, uTile, uRadius, uBright;
       uniform vec3 uWarm, uCool;
       varying vec3 vColor;
       varying float vAlpha;
@@ -108,7 +109,7 @@ const makeMaterial = () =>
         float size = clamp(2.4 - dist / 12000.0, 0.7, 2.4);
         gl_PointSize = max(size, 1.0) * uPixelRatio;
         float twinkle = mix(1.0, 0.75 + 0.25 * sin(uTime * 3.0 + aPhase), uTwinkle);
-        vAlpha = max(exp(-dist / 22000.0), 0.08) * min(size, 1.0) * twinkle * smoothstep(300.0, 700.0, dist);
+        vAlpha = max(exp(-dist / 22000.0), 0.08) * min(size, 1.0) * twinkle * smoothstep(300.0, 700.0, dist) * uBright;
         vColor = mix(uCool, uWarm, aWarm);
       }`,
     fragmentShader: /* glsl */ `
@@ -153,6 +154,7 @@ export function GroundLights() {
     u.uAlt!.value = f.alt;
     u.uTime!.value = state.clock.elapsedTime;
     u.uPixelRatio!.value = state.gl.getPixelRatio();
+    u.uBright!.value = 1 - 0.45 * rig.dawn; // al amanecer las luces de la ciudad destacan menos
   });
 
   return (

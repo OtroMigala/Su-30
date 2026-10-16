@@ -2,7 +2,8 @@ import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { prefersReducedMotion } from '../flight/scroll';
-import { rig } from '../store/flight';
+import { rig, useFlight } from '../store/flight';
+import { damp } from '../flight/route';
 import { rng } from './random';
 
 const smoothstep = (a: number, b: number, x: number) => {
@@ -33,6 +34,16 @@ const MOON_DIR = new THREE.Vector3(
 // La luna real mide 0.26°; la exageramos a 1.4° para que se aprecie en un FOV de 62°.
 const MOON_RADIUS = MOON_DISTANCE * Math.tan(1.4 * DEG);
 
+// ---- Tema: noche ⇄ amanecer (paletas del prototipo, tokens --sky-top, --sky-mid, --horizon...) ----
+const THEME: [string, THREE.Color, THREE.Color][] = [
+  ['uTop', new THREE.Color('#010309'), new THREE.Color('#16203d')],
+  ['uMid', new THREE.Color('#05102a'), new THREE.Color('#3a4876')],
+  ['uHorizon', new THREE.Color('#15243f'), new THREE.Color('#d4875c')],
+  ['uGround', new THREE.Color('#04060a'), new THREE.Color('#17171d')],
+  ['uGround2', new THREE.Color('#020305'), new THREE.Color('#0c0d12')],
+  ['uHaze', new THREE.Color(0.35, 0.43, 0.66), new THREE.Color(1.0, 0.75, 0.55)],
+];
+
 // ---- Cúpula del cielo ----
 // Colores del tema nocturno del prototipo. THREE.Color los pasa de sRGB (como se escriben)
 // a lineal (como se hace la matemática de la luz); <colorspace_fragment> los devuelve a sRGB.
@@ -44,6 +55,7 @@ const domeMaterial = () =>
       uTop: { value: new THREE.Color('#010309') },
       uMid: { value: new THREE.Color('#05102a') },
       uHorizon: { value: new THREE.Color('#15243f') },
+      uHaze: { value: new THREE.Color(0.35, 0.43, 0.66) },
       uGround: { value: new THREE.Color('#04060a') },
       uGround2: { value: new THREE.Color('#020305') },
     },
@@ -54,7 +66,7 @@ const domeMaterial = () =>
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }`,
     fragmentShader: /* glsl */ `
-      uniform vec3 uTop, uMid, uHorizon, uGround, uGround2;
+      uniform vec3 uTop, uMid, uHorizon, uGround, uGround2, uHaze;
       varying vec3 vDir;
       void main() {
         float e = normalize(vDir).y; // seno de la elevación: 0 en el horizonte, 1 en el cenit
@@ -63,7 +75,7 @@ const domeMaterial = () =>
         vec3 ground = mix(uGround, uGround2, smoothstep(0.0, 0.35, -e));
         vec3 col = e >= 0.0 ? sky : ground;
         // Bruma del horizonte: decae exponencialmente con la distancia angular a la línea.
-        col += vec3(0.35, 0.43, 0.66) * (0.2 * exp(-abs(e) * 28.0));
+        col += uHaze * (0.2 * exp(-abs(e) * 28.0));
         gl_FragColor = vec4(col, 1.0);
         #include <colorspace_fragment>
       }`,
@@ -101,10 +113,10 @@ function useStars() {
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
-      uniforms: { uTime: { value: 0 }, uPixelRatio: { value: 1 }, uTwinkle: { value: prefersReducedMotion() ? 0 : 1 } },
+      uniforms: { uTime: { value: 0 }, uPixelRatio: { value: 1 }, uTwinkle: { value: prefersReducedMotion() ? 0 : 1 }, uBright: { value: 1 } },
       vertexShader: /* glsl */ `
         attribute float aSize, aPhase, aMag;
-        uniform float uTime, uPixelRatio, uTwinkle;
+        uniform float uTime, uPixelRatio, uTwinkle, uBright;
         varying float vAlpha;
         void main() {
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
@@ -112,7 +124,7 @@ function useStars() {
           // Centelleo como en el prototipo: brillo × (0.8 + 0.2·sin), cada estrella con su fase.
           // Con prefers-reduced-motion, uTwinkle = 0 y el brillo queda fijo.
           float twinkle = 0.8 + 0.2 * sin(uTime * 2.0 + aPhase);
-          vAlpha = aMag * mix(1.0, twinkle, uTwinkle);
+          vAlpha = aMag * mix(1.0, twinkle, uTwinkle) * uBright;
         }`,
       fragmentShader: /* glsl */ `
         varying float vAlpha;
@@ -167,7 +179,7 @@ export function Sky() {
   const moonLightPivot = useRef<THREE.Group>(null);
   const skyLight = useRef<THREE.HemisphereLight>(null);
 
-  useFrame((state) => {
+  useFrame((state, dt) => {
     camera.getWorldPosition(tmp);
     const heading = rig.flight.heading * DEG;
     if (follow.current) {
@@ -182,6 +194,12 @@ export function Sky() {
     const k = smoothstep(0.6, 1, rig.enter);
     if (moonLight.current) moonLight.current.intensity = THREE.MathUtils.lerp(1.6, 0.3, k);
     if (skyLight.current) skyLight.current.intensity = THREE.MathUtils.lerp(0.55, 0.14, k);
+    // Tema (D/N del MFD): mezcla suave de los colores de noche a los de amanecer del prototipo.
+    // Al amanecer el cielo es más claro y apenas se ven estrellas (35 %, como el prototipo).
+    rig.dawn = damp(rig.dawn, useFlight.getState().theme === 'dawn' ? 1 : 0, 2, Math.min(dt, 0.05));
+    const u = dome.uniforms, d = rig.dawn;
+    for (const [name, night, dawn] of THEME) (u[name]!.value as THREE.Color).lerpColors(night, dawn, d);
+    stars.material.uniforms.uBright!.value = THREE.MathUtils.lerp(1, 0.35, d);
     stars.material.uniforms.uTime!.value = state.clock.elapsedTime;
     stars.material.uniforms.uPixelRatio!.value = state.gl.getPixelRatio();
   });

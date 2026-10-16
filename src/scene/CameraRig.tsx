@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { rig, useFlight } from '../store/flight';
 import { prefersReducedMotion } from '../flight/scroll';
 import { damp } from '../flight/route';
-import { enterFocus, release } from '../input/look';
 import type { CockpitRefs } from './cockpit';
 
 // --- Parámetros de la órbita exterior (metros, en el espacio del avión) ---
@@ -74,7 +73,6 @@ function mfdFrame(mfd: THREE.Mesh, root: THREE.Object3D, pilotPos: THREE.Vector3
  */
 export function CameraRig({ cockpit, root }: { cockpit: CockpitRefs; root: THREE.Object3D }) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
-  const gl = useThree((s) => s.gl);
   const theta = useRef(ORBIT_THETA0);
   const frontHidden = useRef(false);
   const tmp = useMemo(
@@ -116,46 +114,6 @@ export function CameraRig({ cockpit, root }: { cockpit: CockpitRefs; root: THREE
     const th = n('theta');
     return { theta: th === null ? null : th * DEG, ly: n('ly') };
   }, []);
-
-  // ---- Clic en el MFD → focus (raycast propio contra sus 2 triángulos) ----
-  // R3F lanzaría el rayo contra toda la escena (27 000 triángulos) en cada clic; aquí sólo hace
-  // falta saber si el rayo toca la pantalla. La fase 6 reutiliza este rayo para leer la UV.
-  useEffect(() => {
-    const mfd = cockpit.mfd;
-    if (!mfd) return;
-    const ray = new THREE.Raycaster();
-    const ndc = new THREE.Vector2();
-    const el = gl.domElement;
-    const hits = (e: MouseEvent) => {
-      // Coordenadas normalizadas del dispositivo: [−1, 1] en ambos ejes, y hacia arriba.
-      const r = el.getBoundingClientRect();
-      ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-      ray.setFromCamera(ndc, camera);
-      return ray.intersectObject(mfd, false).length > 0;
-    };
-    const inside = () => useFlight.getState().camMode !== 'exterior';
-    // 'click' y no 'pointerup': el navegador no lo dispara si el puntero se arrastró (p. ej. al
-    // mirar alrededor con el dedo), así que un arrastre que termina sobre el MFD no cuenta.
-    const click = (e: MouseEvent) => {
-      if (!inside() || e.button !== 0) return;
-      const onMfd = hits(e);
-      const mode = useFlight.getState().camMode;
-      if (onMfd && mode !== 'focus') enterFocus();
-      else if (!onMfd && mode === 'focus') release(); // clic fuera de la pantalla: volver
-    };
-    // Cursor de mano al pasar por encima del MFD: el usuario descubre que se puede pulsar.
-    const move = (e: PointerEvent) => {
-      if (e.pointerType !== 'mouse') return;
-      el.style.cursor = inside() && useFlight.getState().camMode !== 'focus' && hits(e) ? 'pointer' : '';
-    };
-    el.addEventListener('click', click);
-    el.addEventListener('pointermove', move);
-    return () => {
-      el.removeEventListener('click', click);
-      el.removeEventListener('pointermove', move);
-      el.style.cursor = '';
-    };
-  }, [cockpit, camera, gl]);
 
   // Prioridad negativa: corre ANTES que el resto de useFrame (p. ej. el cielo, que debe leer
   // la posición ya actualizada de la cámara). Ojo: una prioridad POSITIVA desactivaría el

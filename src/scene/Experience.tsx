@@ -3,6 +3,8 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { Aircraft } from './Aircraft';
 import { Sky } from './Sky';
 import { GroundLights } from './GroundLights';
+import { Targets } from './Targets';
+import { initPicking } from '../input/picking';
 import { useFlight } from '../store/flight';
 
 /**
@@ -25,6 +27,13 @@ function Precompile() {
   return null;
 }
 
+/** Conecta el picking (MFD, objetivos) a la cámara y al canvas. */
+function Picking() {
+  const { gl, camera } = useThree();
+  useEffect(() => initPicking(camera, gl.domElement), [gl, camera]);
+  return null;
+}
+
 export function Experience() {
   return (
     <Canvas
@@ -40,6 +49,8 @@ export function Experience() {
       <color attach="background" args={['#010309']} />
       <Sky />
       <GroundLights />
+      <Targets />
+      <Picking />
       <Suspense fallback={null}>
         <Aircraft />
         <Precompile />

@@ -57,7 +57,8 @@ const LAYOUT = {
 const pad = (n: number, w = 2) => String(Math.round(n)).padStart(w, '0');
 const CARDINAL: Record<number, string> = { 0: 'N', 45: 'NE', 90: 'E', 135: 'SE', 180: 'S', 225: 'SW', 270: 'W', 315: 'NW' };
 
-export function drawHud(hc: HudCanvas, f: FlightState, attitude: THREE.Quaternion) {
+/** @param declutter DCL del MFD: oculta la escalera de cabeceo (como el prototipo). */
+export function drawHud(hc: HudCanvas, f: FlightState, attitude: THREE.Quaternion, declutter = false) {
   const { ctx, w, h, rect, k } = hc;
   // Plano del HUD (tangentes) → píxeles del canvas. La y del canvas crece hacia abajo.
   const sx = w / (rect.x1 - rect.x0);
@@ -100,7 +101,7 @@ export function drawHud(hc: HudCanvas, f: FlightState, attitude: THREE.Quaternio
   // Medidas de los peldaños fijadas en grados (no en fracciones del canvas): así no cambian si
   // cambia la escala del combinador.
   const half = AX(3.2) - AX(0), gap = AX(1.4) - AX(0);
-  for (let a = -60; a <= 60; a += 5) {
+  for (let a = -60; a <= 60 && !declutter; a += 5) {
     const c = projectWorld(0, a, attitude);
     if (!c.front) continue;
     const cx = X(c.x), cy = Y(c.y);
