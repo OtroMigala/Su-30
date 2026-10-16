@@ -183,7 +183,14 @@ export function CombinerHud({ cockpit, root }: { cockpit: CockpitRefs; root: THR
     if (useFlight.getState().quality === 'low' && frame.current++ % 2) return;
     const f = rig.flight;
     attitudeQuaternion(f.pitch, f.roll, attitude);
-    drawHud({ ctx: tex.ctx, w: tex.canvas.width, h: tex.canvas.height, rect, k: tex.k }, f, attitude, useFlight.getState().declutter);
+    const s = useFlight.getState();
+    drawHud({ ctx: tex.ctx, w: tex.canvas.width, h: tex.canvas.height, rect, k: tex.k }, f, attitude, {
+      declutter: s.declutter,
+      pilot: s.pilot,
+      section: s.section,
+      gcas: !!rig.manual?.gcas,
+      blink: performance.now() % 600 < 380, // ~1.7 Hz, como una alarma
+    });
     tex.texture.needsUpdate = true; // sube el canvas a la GPU en este fotograma
   });
 

@@ -12,7 +12,7 @@
 // diferencia del prototipo, y el plano se dibuja con mezcla aditiva.
 
 import * as THREE from 'three';
-import { ALT, DEG, L_TOTAL, N, SEG, WP, angDiff, clamp, loadFactor, norm360, posAt } from '../../flight/route';
+import { ALT, DEG, L_TOTAL, N, SEG, WP, angDiff, clamp, norm360 } from '../../flight/route';
 import type { FlightState } from '../../flight/route';
 import { CONTENT } from '../../data/content';
 import { projectWorld, type HudRect } from './projection';
@@ -58,7 +58,18 @@ const pad = (n: number, w = 2) => String(Math.round(n)).padStart(w, '0');
 const CARDINAL: Record<number, string> = { 0: 'N', 45: 'NE', 90: 'E', 135: 'SE', 180: 'S', 225: 'SW', 270: 'W', 315: 'NW' };
 
 /** @param declutter DCL del MFD: oculta la escalera de cabeceo (como el prototipo). */
-export function drawHud(hc: HudCanvas, f: FlightState, attitude: THREE.Quaternion, declutter = false) {
+/** Estado del piloto automático que muestra el HUD. */
+export interface HudModes {
+  declutter: boolean;
+  pilot: 'auto' | 'manual' | 'return';
+  /** Sección actual (en vuelo manual, el siguiente waypoint es la sección + 1). */
+  section: number;
+  gcas: boolean;
+  blink: boolean;
+}
+
+export function drawHud(hc: HudCanvas, f: FlightState, attitude: THREE.Quaternion, modes: HudModes) {
+  const { declutter } = modes;
   const { ctx, w, h, rect, k } = hc;
   // Plano del HUD (tangentes) → píxeles del canvas. La y del canvas crece hacia abajo.
   const sx = w / (rect.x1 - rect.x0);
@@ -181,8 +192,10 @@ export function drawHud(hc: HudCanvas, f: FlightState, attitude: THREE.Quaternio
   ctx.stroke();
 
   // Siguiente waypoint: marca azul sobre la cinta y recuadro NEXT en el cielo (conforme).
-  const nextIdx = clamp(Math.floor(f.s / SEG + 0.08) + 1, 1, N - 1);
-  const pos = posAt(f.s), wp = WP[nextIdx]!;
+  // En ruta, el siguiente según la distancia recorrida; a mano, el siguiente a la última sección
+  // alcanzada. La posición es la de navegación (sin deriva), la misma del radar.
+  const nextIdx = modes.pilot === 'auto' ? clamp(Math.floor(f.s / SEG + 0.08) + 1, 1, N - 1) : clamp(modes.section + 1, 1, N - 1);
+  const pos = { x: f.navX, z: f.navZ }, wp = WP[nextIdx]!;
   const bear = Math.atan2(wp.x - pos.x, wp.z - pos.z) / DEG; // marcación: atan2(este, norte)
   const dist = Math.hypot(wp.x - pos.x, wp.z - pos.z);
   const azR = angDiff(bear, f.heading);
@@ -194,7 +207,7 @@ export function drawHud(hc: HudCanvas, f: FlightState, attitude: THREE.Quaternio
   ctx.lineTo(bx + 5 * k, headY - 10 * k);
   ctx.closePath();
   ctx.fill();
-  if (f.s < L_TOTAL - 50 && Math.abs(azR) < 70) {
+  if ((modes.pilot !== 'auto' || f.s < L_TOTAL - 50) && Math.abs(azR) < 70) {
     // Elevación del waypoint: −atan(Δh / d), como las luces del suelo pero hacia su altitud.
     const elR = -Math.atan((f.alt - ALT[nextIdx]!) / Math.max(dist, 1)) / DEG;
     const p = projectWorld(azR, elR, attitude);
@@ -249,9 +262,18 @@ export function drawHud(hc: HudCanvas, f: FlightState, attitude: THREE.Quaternio
   const lh = 15 * k;
   ctx.textAlign = 'right';
   ctx.fillText(`M ${mach.toFixed(2)}`, AX(-LAYOUT.infoAz), infoY);
-  ctx.fillText(`G ${loadFactor(f.bank).toFixed(1)}`, AX(-LAYOUT.infoAz), infoY + lh);
+  ctx.fillText(`G ${f.n.toFixed(1)}`, AX(-LAYOUT.infoAz), infoY + lh);
+  // Modo de pilotaje: A/P (ruta), MAN (manual) o RTN (el autopiloto vuelve a la ruta, parpadea).
+  const modeTxt = modes.pilot === 'auto' ? 'A/P' : modes.pilot === 'manual' ? 'MAN' : modes.blink ? 'A/P RTN' : '';
+  ctx.fillText(modeTxt, AX(-LAYOUT.infoAz), infoY + 2 * lh);
   ctx.textAlign = 'left';
   ctx.fillText(CONTENT.sections[nextIdx]!.code, AX(LAYOUT.infoAz), infoY);
   ctx.fillText(`${(dist / 1000).toFixed(1)}KM`, AX(LAYOUT.infoAz), infoY + lh);
+  // Auto-GCAS: aviso grande en el centro, como el "PULL UP" de los cazas.
+  if (modes.gcas && modes.blink) {
+    ctx.font = `bold ${Math.round(22 * k)}px 'B612 Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('PULL UP', AX(0), EY(-4));
+  }
   ctx.restore(); // fin del recorte bajo el arco
 }

@@ -5,6 +5,7 @@ import { CONTENT } from '../../data/content';
 import { N, PROJ_IDX } from '../../flight/route';
 import { goToSection, prefersReducedMotion } from '../../flight/scroll';
 import { enterFocus } from '../../input/look';
+import { toggleAutopilot } from '../../flight/autopilot';
 import { addPickable } from '../../input/picking';
 import { radio } from '../overlay/radioQueue';
 import { MFD_SIZE, drawMfd, type MfdAction, type MfdRegion } from './drawMfd';
@@ -60,7 +61,7 @@ export function Mfd({ mesh }: { mesh: THREE.Mesh }) {
       const tc = (now - cautionStart) / 1000;
       // Parpadeo: encendido la primera mitad de cada medio segundo.
       const caution = tc < CAUTION_TIME && (reduced || tc % 0.5 < 0.25);
-      regions = drawMfd(tex.ctx, { section: s.section, selProject: s.selProject, declutter: s.declutter, theme: s.theme, reveal, caution, hoverId });
+      regions = drawMfd(tex.ctx, { section: s.section, selProject: s.selProject, declutter: s.declutter, theme: s.theme, pilot: s.pilot, reveal, caution, hoverId });
       tex.texture.needsUpdate = true;
       // Mientras dure una animación, se vuelve a dibujar en el siguiente fotograma.
       if (reveal < 1 || tc < CAUTION_TIME + 0.3) schedule();
@@ -98,6 +99,9 @@ export function Mfd({ mesh }: { mesh: THREE.Mesh }) {
         case 'project':
           s.setSelProject(a.i);
           break;
+        case 'ap':
+          toggleAutopilot();
+          break;
         case 'link':
           window.open(a.href, '_blank', 'noopener,noreferrer');
           break;
@@ -128,7 +132,7 @@ export function Mfd({ mesh }: { mesh: THREE.Mesh }) {
     // Redibujar cuando cambia lo que se muestra. Al cambiar de sección, animación de aparición.
     const unsub = useFlight.subscribe((s, prev) => {
       if (s.section !== prev.section) revealStart = performance.now();
-      if (s.section !== prev.section || s.selProject !== prev.selProject || s.declutter !== prev.declutter || s.theme !== prev.theme) schedule();
+      if (s.section !== prev.section || s.selProject !== prev.selProject || s.declutter !== prev.declutter || s.theme !== prev.theme || s.pilot !== prev.pilot) schedule();
       if (s.camMode !== prev.camMode && s.camMode !== 'focus' && hoverId) {
         hoverId = null;
         schedule();

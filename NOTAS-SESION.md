@@ -19,7 +19,7 @@ descubrió trabajando, para retomar en otro PC sin perder contexto. Última actu
 | 5 Vista libre (F) y modo focus | hecha | (commit de la fase 5) |
 | 6 MFD interactivo con raycast y objetivos 3D | hecha | (commit de la fase 6) |
 | 7 Post-procesado, optimización, móvil, accesibilidad, créditos | hecha | (commit de la fase 7) |
-| Extra propuesto: modo de vuelo con control manual | idea | |
+| 8 (extra) Vuelo manual, piloto automático, panel en alta resolución | hecha | (commit de la fase 8) |
 
 Forma de trabajo pedida: antes de cada fase, explicar el enfoque en pocas líneas (comparando opciones
 y recomendando una); al final, detenerse, explicar cómo probarla y hacer commit. Responder en español y
@@ -209,6 +209,28 @@ comentar el porqué de cada técnica, sobre todo la matemática y la física (el
 - Bundle: chunks three (187 KB gzip), r3f (105), react (64), motion (49), app (22). `chunkSizeWarningLimit` 800.
   Pantalla de arranque estática en index.html (dentro de #root; React la reemplaza) y <noscript>.
 - Pendiente de medir en dispositivo real: fps en móvil de gama media (SwiftShader no sirve para eso).
+
+## Fase 8 (extra): vuelo manual y piloto automático
+
+- Decisiones del autor (2026-10-16): esquema **Expert** de Ace Combat (A/D tasa de alabeo, W/S factor de carga; loops y
+  toneles), **W = nariz abajo**, **Shift** frena (Ctrl descartado: Ctrl+W cierra la pestaña), Space acelera, y al reconectar
+  el autopiloto el avión **vuela de vuelta** a la ruta (no fundido).
+- `src/flight/manual.ts` (+ 10 tests, 42 en total): masa puntual con actitud en cuaternión; ω = (f̂ × a⊥)/v con a = g·n·û + g;
+  n neutro = cos γ; v̇ = empuje − arrastre − g·sen γ (crucero 220 m/s, máx. ≈ 285); n ∈ [−3, 9]; alabeo hasta 150°/s;
+  Auto-GCAS; `projectOnRoute`, `waypointNear`, `returnGuidance` (persecución pura a 3 km, P en cascada).
+- `src/flight/autopilot.ts`: modos 'auto' | 'manual' | 'return' (store.pilot). Transiciones fuera de useFrame; vigilante a 10 Hz
+  (traspaso cuando `rig.returnDone`, captura de waypoints a < 2.5 km, área de 12 km con 10 s de gracia, avisos GCAS/área).
+  Traspaso sin saltos: `FlightState.hOff/altOff` decaen (λ 0.8) y `resumeRoute` coloca el scroll y planea al siguiente waypoint
+  (o vuela a la sección pedida con el menú). WASD durante el regreso = retomar el mando. Manual sólo con `(pointer: fine)`.
+- `FlightState`: `navX/navZ` (posición de navegación; radar, NEXT y objetivos la usan), `n` (G del HUD).
+- Scroll bloqueado en manual (`lockScroll`: lenis.stop / overflow). Aircraft.tsx elige integrador según el modo.
+- Controles: tecla P, rótulo A/P|MAN|RTN en el MFD (derecha abajo; OSB de la derecha reespaciados a 140 px) y pulsador 3D
+  `AutopilotButton` sobre el antepecho izquierdo (posición medida con un rayo: (0.2567, 0.941, 6.4252), normal (0, .259, −.966)).
+  HUD: modo bajo G y "PULL UP" con Auto-GCAS. Overlay: `PilotTag` y ayuda de teclas del vuelo manual.
+- Panel: `optimize-glb.mjs` exporta además `public/textures/panel_front.webp` (1024 px, q88, ~120 KB) y `HiResPanel` la carga al
+  entrar a la cabina (mipmaps + anisotropía 8). El GLB sigue a 512 px.
+- Corregido: al redimensionar la ventana el avión cambiaba de waypoint (la pista mide en vh); ahora se guarda el progreso en
+  'refreshInit' y se restaura en 'refresh' de ScrollTrigger.
 - Aviso inofensivo en consola: "THREE.Clock deprecated" viene de R3F, no del proyecto.
 
 ## Cómo se verificó visualmente (no hay GPU en las pruebas automáticas)

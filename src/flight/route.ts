@@ -272,6 +272,16 @@ export interface FlightState {
   z: number;
   driftX: number;
   driftZ: number;
+  /** Posición de NAVEGACIÓN (m, este/norte), sin la deriva: la del radar, el NEXT y los objetivos.
+   *  En ruta es posAt(s); en vuelo manual, la posición real del avión. */
+  navX: number;
+  navZ: number;
+  /** Factor de carga que se muestra en el HUD (g). */
+  n: number;
+  /** Desfases de rumbo (°) y altitud (m) que se desvanecen al devolver el control a la ruta:
+   *  así el paso de vuelo manual a ruta no da saltos (ver flight/autopilot.ts). */
+  hOff: number;
+  altOff: number;
   /** Tiempo acumulado (s), para la turbulencia. */
   t: number;
 }
@@ -280,7 +290,7 @@ export function createFlightState(s = 0): FlightState {
   const p = posAt(s);
   return {
     s, heading: headingAt(s), bank: 0, gamma: flightPathAngle(s), pitch: AOA, roll: 0, alt: altAt(s),
-    kts: 380, dsdt: 0, x: p.x, z: p.z, driftX: 0, driftZ: 0, t: 0,
+    kts: 380, dsdt: 0, x: p.x, z: p.z, driftX: 0, driftZ: 0, navX: p.x, navZ: p.z, n: 1, hOff: 0, altOff: 0, t: 0,
   };
 }
 
@@ -306,12 +316,15 @@ export function stepFlight(f: FlightState, s: number, dt: number, motion = 1) {
   //    paso: si haces scroll en una curva, el avión gira e inclina las alas; si paras, ω = 0 y
   //    las nivela. El alabeo se suaviza (λ = 3): un avión real tarda en rodar, no salta.
   const prev = f.heading;
-  f.heading = headingAt(s);
+  // Desfases del traspaso manual → ruta: decaen exponencialmente (λ = 0.8, ~95 % en 4 s).
+  f.hOff = damp(f.hOff, 0, 0.8, dt);
+  f.altOff = damp(f.altOff, 0, 0.8, dt);
+  f.heading = norm360(headingAt(s) + f.hOff);
   const omega = clamp((angDiff(f.heading, prev) * DEG) / dt, -OMEGA_MAX, OMEGA_MAX);
   f.bank = damp(f.bank, clamp(coordinatedBank(omega), -BANK_MAX, BANK_MAX), 3, dt);
 
   // 2) Altitud y cabeceo: la nariz va AOA grados por encima de la trayectoria.
-  f.alt = altAt(s);
+  f.alt = altAt(s) + f.altOff;
   f.gamma = flightPathAngle(s);
 
   // 3) Turbulencia: suma de senos con frecuencias inconmensurables (1.3, 2.9, 1.7, 3.7 rad/s)
@@ -331,5 +344,8 @@ export function stepFlight(f: FlightState, s: number, dt: number, motion = 1) {
   const p = posAt(s);
   f.x = p.x + f.driftX;
   f.z = p.z + f.driftZ;
+  f.navX = p.x;
+  f.navZ = p.z;
+  f.n = loadFactor(f.bank);
   return f;
 }

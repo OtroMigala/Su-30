@@ -2,8 +2,9 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import { rig, useFlight } from '../store/flight';
-import { SNAP_STEP, clamp, damp, progressForSection, scrollToFlight, sectionAt } from './route';
+import { N, SEG, SNAP_STEP, clamp, damp, progressForSection, scrollToFlight, sectionAt } from './route';
 import { setThrottle as setEngineSound } from '../audio/engine';
+import { requestReturn } from './autopilot';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -23,6 +24,8 @@ let lenis: Lenis | null = null;
  * de verdad cambia el valor: los setters lo comprueban).
  */
 function applyProgress(P: number) {
+  // En vuelo manual el scroll no manda (y está bloqueado); al volver a la ruta se sincroniza.
+  if (useFlight.getState().pilot !== 'auto') return;
   rig.progress = P;
   const { enter, s } = scrollToFlight(P);
   rig.enter = enter;
@@ -88,6 +91,21 @@ export function initScroll(track: HTMLElement) {
   window.scrollTo(0, 0);
   applyProgress(trigger.progress);
 
+  // Cambio de tamaño de la ventana (o girar el móvil): la pista mide en vh, así que su altura en
+  // píxeles cambia y el mismo scrollY pasaría a ser otro progreso (otro waypoint). ScrollTrigger
+  // recalcula en dos tiempos: 'refreshInit' antes de medir y 'refresh' después. Se guarda el
+  // progreso antes y se restaura después, para seguir en el mismo punto de la ruta.
+  let savedProgress = 0;
+  const onRefreshInit = () => {
+    savedProgress = rig.progress;
+  };
+  const onRefresh = () => {
+    position = savedProgress;
+    setScroll(savedProgress);
+  };
+  ScrollTrigger.addEventListener('refreshInit', onRefreshInit);
+  ScrollTrigger.addEventListener('refresh', onRefresh);
+
   gsap.ticker.add(throttleTick);
   // La rueda o el dedo cancelan el planeo automático al soltar W/S y el vuelo automático del
   // menú (Lenis lo interrumpe sin llamar a onComplete, así que aquí también se apaga el motor).
@@ -106,6 +124,8 @@ export function initScroll(track: HTMLElement) {
   }
 
   return () => {
+    ScrollTrigger.removeEventListener('refreshInit', onRefreshInit);
+    ScrollTrigger.removeEventListener('refresh', onRefresh);
     gsap.ticker.remove(throttleTick);
     removeEventListener('wheel', userScroll);
     removeEventListener('touchstart', userScroll);
@@ -124,6 +144,34 @@ export function initScroll(track: HTMLElement) {
 // gsap.ticker da el tiempo en segundos; Lenis lo quiere en milisegundos.
 function lenisRaf(time: number) {
   lenis?.raf(time * 1000);
+}
+
+/**
+ * Bloquea el scroll durante el vuelo manual: la rueda, el dedo o las teclas de la página no deben
+ * mover la ruta. Lenis.stop() además pone overflow: clip (lenis.css); sin Lenis (movimiento
+ * reducido) se hace a mano.
+ */
+export function lockScroll(on: boolean) {
+  cancelGlide();
+  if (lenis) {
+    if (on) lenis.stop();
+    else lenis.start();
+  }
+  document.documentElement.style.overflow = on && !lenis ? 'hidden' : '';
+}
+
+/**
+ * Traspaso desde el vuelo manual: coloca el scroll en la distancia s de la ruta y sigue volando,
+ * hacia la sección pedida o, si no hay, planeando hasta el siguiente waypoint.
+ */
+export function resumeRoute(s: number, section: number | null) {
+  position = (s / SEG + 1) / N; // misma relación que scrollToFlight, al revés
+  setScroll(position);
+  if (section !== null) goToSection(section);
+  else {
+    velocity = CRUISE;
+    glideToWaypoint();
+  }
 }
 
 /** Lleva el scroll al progreso P (0..1). `onDone` se llama al llegar. */
@@ -249,6 +297,8 @@ function throttleTick(_time: number, deltaMs: number) {
  * mientras dura y se apaga al llegar (salvo que el usuario esté acelerando con W/S).
  */
 export function goToSection(i: number) {
+  // Volando a mano, elegir destino conecta el autopiloto, que primero vuelve a la ruta.
+  if (useFlight.getState().pilot !== 'auto') return requestReturn(i);
   const P = progressForSection(i);
   cancelGlide();
   const far = Math.abs(P - rig.progress) > 1e-3;

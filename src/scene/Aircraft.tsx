@@ -5,9 +5,14 @@ import * as THREE from 'three';
 import { CameraRig } from './CameraRig';
 import { CombinerHud } from '../hud/combiner/CombinerHud';
 import { Mfd } from '../hud/mfd/Mfd';
+import { AutopilotButton } from './AutopilotButton';
+import { HiResPanel } from './HiResPanel';
 import { prepareCockpit } from './cockpit';
 import { rig } from '../store/flight';
 import { DEG, stepFlight } from '../flight/route';
+import { returnGuidance, stepManual } from '../flight/manual';
+import { syncFromManual } from '../flight/autopilot';
+import { useFlight } from '../store/flight';
 import { prefersReducedMotion } from '../flight/scroll';
 
 export const MODEL_URL = '/models/su30.glb';
@@ -37,7 +42,22 @@ export function Aircraft() {
   useFrame((_, dt) => {
     // dt limitado a 50 ms: tras una pestaña en segundo plano, dt podría ser de varios segundos
     // y el ω = Δψ/dt calculado sería absurdo.
-    const f = stepFlight(rig.flight, rig.s, Math.min(dt, 0.05), motion);
+    dt = Math.min(dt, 0.05);
+    const pilot = useFlight.getState().pilot;
+    const m = rig.manual;
+    const f = rig.flight;
+    if (pilot === 'auto' || !m) stepFlight(f, rig.s, dt, motion);
+    else {
+      // Vuelo manual o regreso guiado: misma física, mandos del teclado o del autopiloto.
+      let input = rig.input;
+      if (pilot === 'return') {
+        const g = returnGuidance(m);
+        if (g.done) rig.returnDone = true; // el traspaso lo hace el vigilante (fuera de useFrame)
+        input = g;
+      }
+      stepManual(m, input, dt);
+      syncFromManual(f, m, dt);
+    }
     const g = group.current;
     if (!g) return;
     // Euler en orden 'XYZ' (matriz Rx·Ry·Rz). Leído como rotaciones INTRÍNSECAS (sobre los ejes
@@ -56,6 +76,8 @@ export function Aircraft() {
       <CameraRig cockpit={cockpit} root={scene} />
       <CombinerHud cockpit={cockpit} root={scene} />
       {cockpit.mfd && <Mfd mesh={cockpit.mfd} />}
+      <AutopilotButton />
+      <HiResPanel root={scene} />
       {/* Luz tenue dentro de la cabina: sin ella el asiento y los laterales son negro puro.
           No pretende ser realista, sólo que se distinga la estructura. */}
       <pointLight position={[0, 1.7, 5.2]} color="#7fb0ff" intensity={0.6} distance={3} decay={2} />

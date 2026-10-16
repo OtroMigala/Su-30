@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { createFlightState } from '../flight/route';
+import type { ManualInput, ManualState } from '../flight/manual';
 
 // Máquina de estados de la cámara (CLAUDE.md):
 //   exterior ──(scroll entra)──► cockpit ──F──► free ──F/Esc──► cockpit
@@ -27,6 +28,10 @@ interface FlightStore {
   theme: 'night' | 'dawn';
   /** Calidad gráfica: la baja PerformanceMonitor si los fps caen. */
   quality: 'high' | 'low';
+  /** Quién vuela: el scroll ('auto'), el usuario ('manual') o el autopiloto volviendo a la ruta. */
+  pilot: 'auto' | 'manual' | 'return';
+  /** Aviso activo en vuelo manual: fuera del área o Auto-GCAS. */
+  alert: '' | 'area' | 'gcas';
   setReady: (ready: boolean) => void;
   setCamMode: (mode: CamMode) => void;
   setSection: (section: number) => void;
@@ -37,6 +42,8 @@ interface FlightStore {
   setDeclutter: (on: boolean) => void;
   setTheme: (t: 'night' | 'dawn') => void;
   setQuality: (q: 'high' | 'low') => void;
+  setPilot: (p: 'auto' | 'manual' | 'return') => void;
+  setAlert: (a: '' | 'area' | 'gcas') => void;
 }
 
 // Estado "reactivo": sólo lo que la interfaz HTML necesita redibujar (cambia pocas veces).
@@ -53,6 +60,8 @@ export const useFlight = create<FlightStore>((set, get) => ({
   declutter: false,
   theme: 'night',
   quality: 'high',
+  pilot: 'auto',
+  alert: '',
   setReady: (ready) => set({ ready }),
   setCamMode: (camMode) => get().camMode !== camMode && set({ camMode }),
   // Al llegar a una sección, el cursor del menú salta a ella (como en el prototipo).
@@ -63,6 +72,8 @@ export const useFlight = create<FlightStore>((set, get) => ({
   setDeclutter: (declutter) => set({ declutter }),
   setTheme: (theme) => set({ theme }),
   setQuality: (quality) => get().quality !== quality && set({ quality }),
+  setPilot: (pilot) => get().pilot !== pilot && set({ pilot }),
+  setAlert: (alert) => get().alert !== alert && set({ alert }),
   setMuted: (muted) => {
     set({ muted });
     try {
@@ -100,4 +111,9 @@ export const rig = {
   focus: 0,
   /** Mezcla del tema del cielo: 0 = noche, 1 = amanecer (D/N en el MFD). La suaviza Sky.tsx. */
   dawn: 0,
+  /** Vuelo manual: estado de la física (null en ruta), mandos del teclado y bandera de "alineado
+   *  con la ruta" que levanta useFrame para que el vigilante haga el traspaso. */
+  manual: null as ManualState | null,
+  input: { roll: 0, pitch: 0, throttle: 0 } as ManualInput,
+  returnDone: false,
 };

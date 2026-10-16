@@ -26,6 +26,7 @@ export type MfdAction =
   | { kind: 'dcl' }
   | { kind: 'theme' }
   | { kind: 'caution' }
+  | { kind: 'ap' }
   | { kind: 'project'; i: number }
   | { kind: 'link'; href: string };
 
@@ -47,6 +48,8 @@ export interface MfdModel {
   reveal: number;
   /** MASTER CAUTION encendido en este instante (parpadea). */
   caution: boolean;
+  /** Quién vuela: el rótulo A/P muestra A/P (ruta), MAN (manual) o RTN (regresando). */
+  pilot: 'auto' | 'manual' | 'return';
   hoverId: string | null;
 }
 
@@ -111,11 +114,13 @@ export function drawMfd(ctx: CanvasRenderingContext2D, m: MfdModel): MfdRegion[]
   CONTENT.sections.forEach((s, i) =>
     osb(`sec${i}`, s.code, 150 + i * 140, -1, { kind: 'section', i }, i === m.section),
   );
-  osb('prv', 'PRV', 190, 1, { kind: 'prv' });
-  osb('nxt', 'NXT', 350, 1, { kind: 'nxt' });
-  osb('dcl', 'DCL', 510, 1, { kind: 'dcl' }, m.declutter);
-  osb('theme', m.theme === 'night' ? 'D/N' : 'N/D', 670, 1, { kind: 'theme' }, m.theme === 'dawn');
-  osb('caution', 'CAUT', 830, 1, { kind: 'caution' }, m.caution);
+  osb('prv', 'PRV', 150, 1, { kind: 'prv' });
+  osb('nxt', 'NXT', 290, 1, { kind: 'nxt' });
+  osb('dcl', 'DCL', 430, 1, { kind: 'dcl' }, m.declutter);
+  osb('theme', m.theme === 'night' ? 'D/N' : 'N/D', 570, 1, { kind: 'theme' }, m.theme === 'dawn');
+  osb('caution', 'CAUT', 710, 1, { kind: 'caution' }, m.caution);
+  // Piloto automático: resaltado (ámbar) cuando NO está en ruta, para que se note el modo manual.
+  osb('ap', m.pilot === 'auto' ? 'A/P' : m.pilot === 'manual' ? 'MAN' : 'RTN', 850, 1, { kind: 'ap' }, m.pilot !== 'auto');
 
   // ---------------- Contenido ----------------
   const X0 = 150, X1 = 874, W = X1 - X0;

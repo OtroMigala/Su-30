@@ -119,6 +119,22 @@ for (const m of root.listMeshes()) if (/^Object_/.test(m.getName())) m.setName('
 // ---- 4-6. transformaciones ----
 // OJO: prune() y join() borran por defecto los nodos hoja vacíos, que es justo lo que son
 // cam_pilot y hud_anchor (puntos de referencia). Por eso keepLeaves:true y cleanup:false.
+// ---- Textura del panel delantero a resolución completa (carga diferida en la web) ----
+// El GLB lleva el panel a TEX px para que la carga inicial sea ligera; la versión completa (la del
+// original, 1024 px) se guarda aparte y la web la descarga al entrar a la cabina (HiResPanel.tsx).
+// Los mipmaps de la GPU ya eligen la resolución adecuada según el tamaño en pantalla.
+const HIRES_DIR = arg('hires', 'public/textures');
+{
+  const panel = byName('panel_front')?.getMesh()?.listPrimitives()[0]?.getMaterial();
+  const tex = panel?.getBaseColorTexture();
+  if (tex) {
+    fs.mkdirSync(HIRES_DIR, { recursive: true });
+    const file = path.join(HIRES_DIR, 'panel_front.webp');
+    await sharp(Buffer.from(tex.getImage())).webp({ quality: 88, effort: 6 }).toFile(file);
+    console.log(`· panel_front a resolución completa: ${tex.getSize().join('x')} -> ${file} (${(fs.statSync(file).size / 1024).toFixed(0)} KB)`);
+  } else console.warn('· panel_front sin textura: no se exporta la versión de alta resolución');
+}
+
 const bigTextures = [], smallTextures = [];
 for (const t of root.listTextures()) (Math.max(...t.getSize()) > 64 ? bigTextures : smallTextures).push(t);
 bigTextures.forEach((t, i) => t.setName(`big-${i}`));

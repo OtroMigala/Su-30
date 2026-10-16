@@ -8,6 +8,7 @@ import { Radar } from './Radar';
 import { WeaponMenu } from './WeaponMenu';
 import { LookControls } from './LookControls';
 import { MobileNav } from './MobileNav';
+import { PilotTag } from './PilotTag';
 import { radio } from './radioQueue';
 
 /**
@@ -45,6 +46,7 @@ export function Hud() {
       <WeaponMenu />
       <LookControls />
       <MobileNav />
+      <PilotTag />
     </div>
   );
 }

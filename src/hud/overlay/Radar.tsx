@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { rig, useFlight } from '../../store/flight';
-import { DEG, TARGETS, WP, posAt, radarPoint } from '../../flight/route';
+import { DEG, TARGETS, WP, radarPoint } from '../../flight/route';
 import { CONTENT } from '../../data/content';
 import { prefersReducedMotion } from '../../flight/scroll';
 
@@ -14,8 +14,8 @@ const SWEEP = 2.4;
  * girando a su alrededor. Se dibuja en un <canvas> 2D con su propio requestAnimationFrame,
  * leyendo el estado del vuelo de `rig` (sin pasar por React).
  *
- * La posición es la de la ruta (posAt), sin la deriva que usan las luces del suelo: la deriva
- * avanza 170 m/s aunque no vueles y alejaría poco a poco los waypoints de su sitio en el radar.
+ * La posición es la de navegación (f.navX/navZ), sin la deriva que usan las luces del suelo: la
+ * deriva avanza 170 m/s aunque no vueles y alejaría poco a poco los waypoints de su sitio.
  */
 export function Radar() {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -86,7 +86,7 @@ export function Radar() {
         }
       }
 
-      const pos = posAt(f.s);
+      const pos = { x: f.navX, z: f.navZ }; // posición de navegación (ruta o vuelo manual)
       ctx.font = `${9 * dpr}px 'B612 Mono', monospace`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';

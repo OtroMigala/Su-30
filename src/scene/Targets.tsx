@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { rig, useFlight } from '../store/flight';
 import { CONTENT } from '../data/content';
-import { DEG, PROJ_IDX, SEG, TARGETS, angDiff, posAt } from '../flight/route';
+import { DEG, PROJ_IDX, SEG, TARGETS, WP, angDiff } from '../flight/route';
 import { goToSection } from '../flight/scroll';
 import { worldDir } from '../hud/combiner/projection';
 import { addPickable } from '../input/picking';
@@ -105,9 +105,10 @@ export function Targets() {
     const f = rig.flight;
     const s = useFlight.getState();
     const inside = s.camMode === 'cockpit' || s.camMode === 'free';
-    // Sólo cerca del waypoint de proyectos (±0.85 tramos), como en el prototipo.
-    const near = Math.abs(f.s - PROJ_IDX * SEG) < SEG * 0.85;
-    const pos = posAt(f.s); // posición de la ruta, sin deriva (como el radar y el NEXT)
+    // Sólo cerca del waypoint de proyectos (a menos de 0.85 tramos), como en el prototipo. Se mide
+    // por distancia (no por s) para que también funcione volando a mano.
+    const pos = { x: f.navX, z: f.navZ }; // posición de navegación, sin deriva (como el radar)
+    const near = Math.hypot(pos.x - WP[PROJ_IDX]!.x, pos.z - WP[PROJ_IDX]!.z) < SEG * 0.85;
     camera.getWorldPosition(tmp.cam);
 
     TARGETS.forEach((t, i) => {
