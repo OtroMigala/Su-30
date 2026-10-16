@@ -20,61 +20,71 @@ import { CONTENT } from '../../data/content';
  */
 const SEGMENT_VH = 120;
 
+/** Texto accesible de una sección: la misma información que el MFD, como HTML real. */
 function SectionText({ id }: { id: string }) {
-  switch (id) {
-    case 'about':
-      return <p>{CONTENT.about.filter(Boolean).join(' ')}</p>;
-    case 'projects':
-      return (
+  const sec = CONTENT.sections.find((x) => x.id === id)!;
+  const ext = (href: string, text: string) => (
+    <a href={href} target="_blank" rel="noopener noreferrer">
+      {text}
+    </a>
+  );
+  if (id === 'credits')
+    return (
+      <>
+        <h3>Stack</h3>
         <ul>
-          {CONTENT.projects.map((p) => (
-            <li key={p.id}>
-              {p.name} ({p.tag}): {p.desc}
+          {CONTENT.stackGroups.map(([g, items]) => (
+            <li key={g}>
+              {g}: {items}
             </li>
           ))}
         </ul>
-      );
-    case 'skills':
-      return (
-        <ul>
-          {CONTENT.skills.map(([name, level]) => (
-            <li key={name}>
-              {name}: {level} de 10
-            </li>
-          ))}
-        </ul>
-      );
-    case 'contact':
-      return (
-        <ul>
-          {CONTENT.contact.map(([k, v, href]) => (
-            <li key={k}>
-              <a href={href} target="_blank" rel="noopener noreferrer">
-                {k}: {v}
-              </a>
-            </li>
-          ))}
-        </ul>
-      );
-    case 'credits':
-      return (
+        <h3>Créditos</h3>
         <ul>
           {CONTENT.credits.map((c) => (
-            <li key={c.text}>
-              {c.href ? (
-                <a href={c.href} target="_blank" rel="noopener noreferrer">
-                  {c.text}
-                </a>
-              ) : (
-                c.text
-              )}
-            </li>
+            <li key={c.text}>{c.href ? ext(c.href, c.text) : c.text}</li>
           ))}
         </ul>
-      );
-    default:
-      return <p>{CONTENT.sections[0]!.radio[1]}</p>;
-  }
+      </>
+    );
+  return (
+    <>
+      {id === 'start' && (
+        <>
+          <p>
+            {CONTENT.pilot} ({CONTENT.callsign}). {CONTENT.role}.
+          </p>
+          <ul>
+            {CONTENT.links.map(([k, v, href]) => (
+              <li key={k}>{ext(href, `${k}: ${v}`)}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      {sec.theory.map((t) => (
+        <p key={t}>{t}</p>
+      ))}
+      {id === 'start' && (
+        <>
+          <h3>Ficha técnica del Su-30MKI (valores aproximados)</h3>
+          <dl>
+            {CONTENT.aircraft.map(([k, v]) => (
+              <div key={k}>
+                <dt>{k}</dt>
+                <dd>{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </>
+      )}
+      <h3>Construido con: {sec.stack.join(', ')}</h3>
+      <ul>
+        {sec.how.map((h) => (
+          <li key={h}>{h}</li>
+        ))}
+      </ul>
+    </>
+  );
 }
 
 export function FlightTrack() {

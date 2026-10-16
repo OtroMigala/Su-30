@@ -73,7 +73,7 @@ export const N = CONTENT.sections.length;
 /** Distancia entre waypoints (m). */
 export const SEG = 14000;
 /** Rumbo de cada tramo (grados). Hay N − 1 tramos. */
-export const LEG_H = [30, 105, 165, 110, 45] as const;
+export const LEG_H = [30, 105, 165, 110, 45, 345] as const;
 /** Distancia antes del waypoint a la que empieza el giro (m). */
 export const R_TURN = 4200;
 /** Altitud de cada waypoint (m). */
@@ -135,22 +135,26 @@ export function altAt(s: number) {
   return ALT[k]! + (ALT[k + 1]! - ALT[k]!) * smoothstep(0, 1, t);
 }
 
-/** Índice de la sección de proyectos (sus objetivos aparecen cerca de ese waypoint). */
-export const PROJ_IDX = CONTENT.sections.findIndex((s) => s.id === 'projects');
+/** Índice de la sección de radar (sus contactos están por delante de ese waypoint). */
+export const RADAR_IDX = CONTENT.sections.findIndex((s) => s.id === 'radar');
 
 /**
- * Proyectos como "objetivos" en el cielo, frente al waypoint de proyectos (del prototipo).
- * Cada uno está `fwd` metros por delante en el rumbo del tramo y `lat` metros a un lado.
- * El vector "derecha" de un rumbo ψ es (cos ψ, −sen ψ) en (este, norte): es el vector delante
- * (sen ψ, cos ψ) girado 90° en sentido horario. Así lat > 0 queda a la derecha del piloto.
+ * Posición de los contactos de radar, por delante del waypoint RDR en el rumbo de su tramo.
+ * Cada uno está `fwd` metros por delante y `lat` metros a un lado. El vector "derecha" de un
+ * rumbo ψ es (cos ψ, −sen ψ) en (este, norte): el vector delante (sen ψ, cos ψ) girado 90° en
+ * sentido horario. Así lat > 0 queda a la derecha del piloto.
+ *
+ * Las distancias están elegidas para la demostración: desde el waypoint RDR se detectan el caza
+ * (9 km, alcance ~28 km) y el avión comercial (30 km, alcance ~59 km); el dron (13 km, alcance
+ * ~10.5 km) y el misil (19 km, alcance ~15.7 km) aparecen al avanzar hacia ellos.
  */
-export const TARGETS: readonly { x: number; z: number; alt: number }[] = CONTENT.projects.map((_, i) => {
-  const base = WP[PROJ_IDX]!, h = LEG_H[PROJ_IDX]! * DEG;
-  const fwd = [3600, 5400, 7200, 9000][i % 4]!, lat = [-2600, 2200, -1500, 2900][i % 4]!;
+export const TARGETS: readonly { x: number; z: number; alt: number }[] = CONTENT.contacts.map((_, i) => {
+  const base = WP[RADAR_IDX]!, h = LEG_H[RADAR_IDX]! * DEG;
+  const fwd = [9000, 30000, 13000, 19000][i % 4]!, lat = [-2600, 4000, 2200, -1500][i % 4]!;
   return {
     x: base.x + Math.sin(h) * fwd + Math.cos(h) * lat,
     z: base.z + Math.cos(h) * fwd - Math.sin(h) * lat,
-    alt: ALT[PROJ_IDX]! + [250, -150, 420, 80][i % 4]!,
+    alt: ALT[RADAR_IDX]! + [250, 1500, -400, 80][i % 4]!,
   };
 });
 

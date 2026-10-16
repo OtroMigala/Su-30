@@ -4,16 +4,9 @@ import { goToSection } from '../../flight/scroll';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-// La columna de la derecha imita el "contador de munición" del selector de armas: cuántos
-// elementos tiene cada sección.
-const COUNTS: Record<string, string> = {
-  start: '--',
-  about: '01',
-  projects: pad(CONTENT.projects.length),
-  skills: pad(CONTENT.skills.length),
-  contact: pad(CONTENT.contact.length),
-  credits: pad(CONTENT.credits.length),
-};
+// La columna de la derecha imita el "contador de munición" del selector de armas: cuántas
+// tecnologías se usaron para construir cada sistema.
+const COUNTS: Record<string, string> = Object.fromEntries(CONTENT.sections.map((s) => [s.id, pad(s.stack.length)]));
 
 /**
  * Menú tipo selector de armas (abajo a la derecha). Son botones de verdad dentro de un <nav>:

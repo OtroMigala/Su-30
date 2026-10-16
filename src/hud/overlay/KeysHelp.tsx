@@ -1,4 +1,5 @@
 import { useFlight } from '../../store/flight';
+import { N } from '../../flight/route';
 
 /** Ayuda de teclas (arriba a la derecha; se oculta en pantallas estrechas, sin teclado). */
 export function KeysHelp() {
@@ -26,7 +27,7 @@ export function KeysHelp() {
         <kbd>Q</kbd> <kbd>E</kbd> elegir sección · <kbd>ENTER</kbd> ir
       </div>
       <div>
-        <kbd>1</kbd>–<kbd>6</kbd> salto directo · <kbd>M</kbd> sonido
+        <kbd>1</kbd>–<kbd>{N}</kbd> salto directo · <kbd>M</kbd> sonido
       </div>
       <div>
         <kbd>F</kbd> mirar alrededor · <kbd>ESC</kbd> soltar · clic en la pantalla

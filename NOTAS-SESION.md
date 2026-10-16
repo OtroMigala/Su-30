@@ -20,6 +20,7 @@ descubrió trabajando, para retomar en otro PC sin perder contexto. Última actu
 | 6 MFD interactivo con raycast y objetivos 3D | hecha | (commit de la fase 6) |
 | 7 Post-procesado, optimización, móvil, accesibilidad, créditos | hecha | (commit de la fase 7) |
 | 8 (extra) Vuelo manual, piloto automático, panel en alta resolución | hecha | (commit de la fase 8) |
+| 9 (extra) Laboratorio de aviónica + stack + ficha Su-30MKI | hecha | (commit de la fase 9) |
 
 Forma de trabajo pedida: antes de cada fase, explicar el enfoque en pocas líneas (comparando opciones
 y recomendando una); al final, detenerse, explicar cómo probarla y hacer commit. Responder en español y
@@ -231,6 +232,24 @@ comentar el porqué de cada técnica, sobre todo la matemática y la física (el
   entrar a la cabina (mipmaps + anisotropía 8). El GLB sigue a 512 px.
 - Corregido: al redimensionar la ventana el avión cambiaba de waypoint (la pista mide en vh); ahora se guarda el progreso en
   'refreshInit' y se restaura en 'refresh' de ScrollTrigger.
+
+## Fase 9 (extra): laboratorio de aviónica
+
+- Decisión del autor (2026-10-16): el sitio NO es su portafolio (ya tiene otro). Objetivo: "lucirse", un lienzo de lo que sabe:
+  laboratorio de aviónica (cada waypoint = un sistema del avión) + qué tecnologías construyen cada parte + ficha del Su-30MKI.
+- 7 waypoints (N = 7, `LEG_H` = [30, 105, 165, 110, 45, 345]): TKOF briefing, FCS, HUD, RDR, NAV, COMM, RTB (stack + créditos).
+  `CONTENT.sections[i]` lleva `theory`, `stack`, `how`; además `links` (EDITAR), `aircraft` (ficha, "valores aproximados de
+  fuentes públicas": verificar), `contacts`, `stackGroups`, `credits`.
+- `src/avionics/`: `radar.ts` (ecuación del radar, ruido kTBF, alcance máx., Doppler; banda X ilustrativa), `link.ts` (FSPL/Friis,
+  balance, horizonte radio 4.12·(√h1+√h2)), `kalman.ts` (2 filtros 1D de velocidad constante, Box–Muller), `navSim.ts` (GPS σ 15 m
+  por eje a 1 Hz sobre la posición del suelo f.x/f.z; Q = 4), `contacts.ts` (R, az, el, SNR, detección, Doppler). 10 tests.
+- MFD: pestañas por sección (`pagesOf`): SISTEMA (demo en vivo) / STACK; TKOF: PILOTO / SU-30MKI / STACK; RTB: STACK / CRÉDITOS.
+  PRV/NXT y ← → cambian de página; store `mfdPage` (vuelve a 0 al cambiar de sección) y `selContact`. Datos en vivo calculados
+  en Mfd.tsx a 8 Hz (setInterval) y redibujo sólo si la página es "en vivo". OSB izquierdos cada 128 px.
+- Contactos (antes proyectos): C1 caza σ5 (9 km por delante de RDR), C2 comercial σ100 (30 km), C3 dron σ0.1 (13 km), C4 misil σ0.5
+  (19 km); sprites y radar de pantalla sólo si SNR ≥ 13 dB y a < 1.6 tramos de RDR. Clic → análisis en la página RDR.
+- Menú: el contador de cada sección = nº de tecnologías de su `stack`. Texto accesible (FlightTrack) con teoría, stack, enlaces,
+  ficha y créditos.
 - Aviso inofensivo en consola: "THREE.Clock deprecated" viene de R3F, no del proyecto.
 
 ## Cómo se verificó visualmente (no hay GPU en las pruebas automáticas)

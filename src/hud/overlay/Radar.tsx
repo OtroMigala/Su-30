@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { rig, useFlight } from '../../store/flight';
 import { DEG, TARGETS, WP, radarPoint } from '../../flight/route';
+import { contactInfo } from '../../avionics/contacts';
 import { CONTENT } from '../../data/content';
 import { prefersReducedMotion } from '../../flight/scroll';
 
@@ -106,10 +107,11 @@ export function Radar() {
         if (!q.out) ctx.fillText(CONTENT.sections[i]!.code, x + 5 * dpr, y);
       });
 
-      // Objetivos (proyectos): rombos rojos.
+      // Contactos: rombos rojos, sólo si el radar los detecta (SNR sobre el umbral).
       ctx.globalAlpha = 1;
       ctx.fillStyle = C.alert;
-      for (const t of TARGETS) {
+      for (const [i, t] of TARGETS.entries()) {
+        if (!contactInfo(i, f).detected) continue;
         const q = radarPoint(t.x - pos.x, t.z - pos.z, f.heading, RANGE);
         if (q.out) continue;
         const x = q.x * R, y = q.y * R;

@@ -18,8 +18,10 @@ interface FlightStore {
   muted: boolean;
   /** Cursor del menú tipo selector de armas (Q/E lo mueven, Enter vuela ahí). */
   menuSel: number;
-  /** Proyecto cuya ficha muestra el MFD. */
-  selProject: number;
+  /** Contacto de radar elegido (página RDR del MFD). */
+  selContact: number;
+  /** Página del MFD dentro de la sección (SISTEMA, CONSTRUIDO CON...). Vuelve a 0 al cambiar de sección. */
+  mfdPage: number;
   /** Objetivo fijado con el cursor (−1 = ninguno). */
   lockId: number;
   /** DCL: HUD simplificado (sin escalera de cabeceo). */
@@ -37,7 +39,8 @@ interface FlightStore {
   setSection: (section: number) => void;
   setMuted: (muted: boolean) => void;
   setMenuSel: (i: number) => void;
-  setSelProject: (i: number) => void;
+  setSelContact: (i: number) => void;
+  setMfdPage: (p: number) => void;
   setLockId: (i: number) => void;
   setDeclutter: (on: boolean) => void;
   setTheme: (t: 'night' | 'dawn') => void;
@@ -55,7 +58,8 @@ export const useFlight = create<FlightStore>((set, get) => ({
   section: 0,
   muted: readMuted(),
   menuSel: 0,
-  selProject: 0,
+  selContact: 0,
+  mfdPage: 0,
   lockId: -1,
   declutter: false,
   theme: 'night',
@@ -65,9 +69,10 @@ export const useFlight = create<FlightStore>((set, get) => ({
   setReady: (ready) => set({ ready }),
   setCamMode: (camMode) => get().camMode !== camMode && set({ camMode }),
   // Al llegar a una sección, el cursor del menú salta a ella (como en el prototipo).
-  setSection: (section) => get().section !== section && set({ section, menuSel: section }),
+  setSection: (section) => get().section !== section && set({ section, menuSel: section, mfdPage: 0 }),
   setMenuSel: (menuSel) => get().menuSel !== menuSel && set({ menuSel }),
-  setSelProject: (selProject) => get().selProject !== selProject && set({ selProject }),
+  setSelContact: (selContact) => get().selContact !== selContact && set({ selContact }),
+  setMfdPage: (mfdPage) => get().mfdPage !== mfdPage && set({ mfdPage }),
   setLockId: (lockId) => get().lockId !== lockId && set({ lockId }),
   setDeclutter: (declutter) => set({ declutter }),
   setTheme: (theme) => set({ theme }),

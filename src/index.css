@@ -467,6 +467,23 @@ body.looking {
   padding: 0;
   list-style: none;
 }
+.track-section h3 {
+  margin: 8px 0 4px;
+  font-size: 12px;
+  color: var(--amber);
+}
+.track-section dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 12px;
+  margin: 0;
+}
+.track-section dl > div {
+  display: contents;
+}
+.track-section dd {
+  margin: 0;
+}
 .track-section a {
   color: var(--hud);
 }

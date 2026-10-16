@@ -3,7 +3,7 @@ import {
   ALT, AOA, BANK_MAX, L_TOTAL, LEG_H, N, R_TURN, SEG, SNAP_STEP, WP,
   altAt, angDiff, coordinatedBank, createFlightState, damp, flightPathAngle, groundElevation,
   headingAt, lerpAngle, loadFactor, norm360, posAt, progressForSection, scrollToFlight,
-  sectionAt, smoothstep, stepFlight, PROJ_IDX, TARGETS, radarPoint,
+  sectionAt, smoothstep, stepFlight, RADAR_IDX, TARGETS, radarPoint,
 } from './route';
 
 describe('utilidades angulares', () => {
@@ -99,9 +99,9 @@ describe('geometría de la ruta', () => {
 });
 
 describe('objetivos y radar', () => {
-  it('un objetivo por proyecto, delante del waypoint de proyectos', () => {
+  it('un contacto por entrada, delante del waypoint de radar', () => {
     expect(TARGETS.length).toBeGreaterThan(0);
-    const wp = WP[PROJ_IDX]!, h = (LEG_H[PROJ_IDX]! * Math.PI) / 180;
+    const wp = WP[RADAR_IDX]!, h = (LEG_H[RADAR_IDX]! * Math.PI) / 180;
     for (const t of TARGETS) {
       const ahead = (t.x - wp.x) * Math.sin(h) + (t.z - wp.z) * Math.cos(h); // proyección sobre el rumbo
       expect(ahead).toBeGreaterThan(3000);
