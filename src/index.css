@@ -342,6 +342,64 @@ body {
   filter: drop-shadow(0 0 3px rgba(141, 255, 160, 0.6));
 }
 
+/* --- Vista libre y MFD --- */
+/* Frente al MFD sobran los instrumentos de los bordes: la pantalla es la protagonista. */
+.hud :is(.status, .radar, .weapons, .keys) {
+  transition: opacity 0.3s;
+}
+.hud.focus :is(.status, .radar, .weapons, .keys) {
+  opacity: 0;
+  visibility: hidden;
+}
+body.looking {
+  touch-action: none; /* en vista libre, arrastrar el dedo mira alrededor en vez de hacer scroll */
+}
+.looktag {
+  position: absolute;
+  left: 50%;
+  top: calc(env(safe-area-inset-top, 0px) + 92px);
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--amber);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+  text-shadow: 0 0 6px rgba(255, 184, 77, 0.6);
+}
+.looktag.on {
+  opacity: 1;
+}
+.lookbtn {
+  display: none;
+  position: absolute;
+  right: calc(env(safe-area-inset-right, 0px) + 16px);
+  top: calc(env(safe-area-inset-top, 0px) + 58px); /* bajo el botón SND */
+  background: rgba(2, 12, 6, 0.5);
+  border: 1px solid var(--hud);
+  color: var(--hud);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.lookbtn[aria-pressed='true'] {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+.lookbtn:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 3px;
+}
+.backbtn {
+  display: block;
+  top: auto;
+  right: 50%;
+  transform: translateX(50%);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+}
+
 /* Texto sólo para lectores de pantalla: fuera de la vista pero en el árbol de accesibilidad.
    (display:none o visibility:hidden lo quitarían también para ellos.) */
 .sr {
@@ -399,6 +457,9 @@ body {
   .keys,
   .weapons {
     display: none;
+  }
+  .lookbtn {
+    display: block;
   }
   .radio {
     width: 88vw;

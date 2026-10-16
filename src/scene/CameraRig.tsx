@@ -1,8 +1,10 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { rig } from '../store/flight';
+import { rig, useFlight } from '../store/flight';
 import { prefersReducedMotion } from '../flight/scroll';
+import { damp } from '../flight/route';
+import { enterFocus, release } from '../input/look';
 import type { CockpitRefs } from './cockpit';
 
 // --- Parámetros de la órbita exterior (metros, en el espacio del avión) ---
@@ -17,31 +19,62 @@ const APPROACH = new THREE.Vector3(0, 3.4, 3.6);
 
 // Dentro de la cabina la cámara mira un poco hacia abajo (como un piloto que revisa el HUD y
 // el tablero). Con la mirada horizontal el MFD queda a 34° bajo la línea de visión, fuera del
-// campo vertical de ±31°. A 8° queda a 26° y se ve en la parte inferior. Se revisará en la
-// fase 4 (el HUD está 6.7° por debajo de la horizontal) y en la 5 (modo focus).
-const COCKPIT_PITCH = (-8 * Math.PI) / 180;
+// campo vertical de ±31°. A 8° queda a 26° y se ve en la parte inferior.
+const COCKPIT_PITCH = -8;
 
 const FOV_EXTERIOR = 38;
 const FOV_COCKPIT = 62; // el prototipo usa 62° de FOV vertical
 
+// --- Cabeza del piloto (vista libre) ---
+// La cabeza no gira alrededor de los ojos sino del cuello (la articulación atlanto-occipital y las
+// vértebras cervicales), que está detrás y debajo de ellos. Así, al girar, los ojos se TRASLADAN
+// unos centímetros: eso produce paralaje en lo cercano (la cabina) y nada en lo lejano.
+const EYE_FROM_NECK = new THREE.Vector3(0, 0.08, 0.09); // ojos: 8 cm arriba y 9 cm delante del cuello
+/** Al mirar a un lado, el piloto además inclina el tronco hacia ese lado (m a 90° de giro). */
+const LEAN = 0.07;
+/** λ del suavizado de la cabeza (1/s): el 95 % del giro en 3/7 ≈ 0.4 s. */
+const HEAD_LAMBDA = 7;
+
+// --- Modo focus (MFD) ---
+/** Fracción de la vista que ocupa el MFD al acercarse. */
+const FOCUS_FILL = 0.75;
+const FOCUS_LAMBDA = 4.5;
+
+const DEG = Math.PI / 180;
 const smoothstep = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
 };
 
+/** Centro, normal (hacia el piloto) y tamaño de mfd_main en el marco del cuerpo. */
+function mfdFrame(mfd: THREE.Mesh, root: THREE.Object3D, pilotPos: THREE.Vector3) {
+  root.updateMatrixWorld(true);
+  const toRoot = new THREE.Matrix4().copy(root.matrixWorld).invert().multiply(mfd.matrixWorld);
+  mfd.geometry.computeBoundingBox();
+  const center = mfd.geometry.boundingBox!.getCenter(new THREE.Vector3()).applyMatrix4(toRoot);
+  // El plano tiene normal local +Y (ver cockpit.ts); transformDirection aplica sólo la rotación.
+  const normal = new THREE.Vector3(0, 1, 0).transformDirection(toRoot);
+  if (normal.dot(pilotPos.clone().sub(center)) < 0) normal.negate();
+  const size = new THREE.Box3().setFromObject(mfd).getSize(new THREE.Vector3());
+  return { center, normal, side: Math.max(size.x, 0.05) };
+}
+
 /**
- * Cámara hija del avión: se mueve en el espacio LOCAL del avión, así que cuando la fase 2 lo
- * incline, el horizonte gira alrededor del piloto y la cabina se mantiene fija en pantalla.
+ * Cámara hija del avión: se mueve en el espacio LOCAL del avión, así que cuando éste se inclina,
+ * el horizonte gira alrededor del piloto y la cabina se mantiene fija en pantalla.
  *
- * Posición (rig.enter = t, de 0 a 1): curva de Bézier cuadrática
+ * Posición durante la entrada (rig.enter = t, de 0 a 1): curva de Bézier cuadrática
  *     B(t) = (1−t)²·P0 + 2(1−t)t·P1 + t²·P2
  * P0 = punto de la órbita, P1 = APPROACH (sobre el canopy), P2 = cam_pilot.
  * La curva parte de P0 en dirección a P1 y llega a P2 con la tangente B'(1) = 2(P2 − P1),
  * es decir, bajando hacia los ojos del piloto a través del cristal (transparente), sin
  * cruzar el fuselaje opaco, que sí atravesaría una línea recta desde la órbita.
+ *
+ * Dentro de la cabina se le suman la cabeza (vista libre) y el acercamiento al MFD (focus).
  */
-export function CameraRig({ cockpit }: { cockpit: CockpitRefs }) {
+export function CameraRig({ cockpit, root }: { cockpit: CockpitRefs; root: THREE.Object3D }) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
+  const gl = useThree((s) => s.gl);
   const theta = useRef(ORBIT_THETA0);
   const frontHidden = useRef(false);
   const tmp = useMemo(
@@ -49,53 +82,141 @@ export function CameraRig({ cockpit }: { cockpit: CockpitRefs }) {
       p0: new THREE.Vector3(),
       pos: new THREE.Vector3(),
       look: new THREE.Vector3(),
-      // Punto a 50 m en la dirección de la mirada final: adelante (+Z) inclinada COCKPIT_PITCH.
-      lookForward: cockpit.pilotPos
-        .clone()
-        .add(new THREE.Vector3(0, Math.sin(COCKPIT_PITCH), Math.cos(COCKPIT_PITCH)).multiplyScalar(50)),
+      dir: new THREE.Vector3(),
+      head: new THREE.Vector3(),
+      neck: cockpit.pilotPos.clone().sub(EYE_FROM_NECK),
       m: new THREE.Matrix4(),
+      q: new THREE.Quaternion(),
+      qFocus: new THREE.Quaternion(),
+      e: new THREE.Euler(),
       up: new THREE.Vector3(0, 1, 0),
     }),
     [cockpit],
   );
   const reduced = useMemo(prefersReducedMotion, []);
-  const debugTheta = useMemo(() => {
-    if (!import.meta.env.DEV) return null;
-    const v = new URLSearchParams(location.search).get('theta');
-    return v === null ? null : (Number(v) * Math.PI) / 180;
+
+  // Pose del modo focus: frente a la pantalla, a lo largo de su normal, a la distancia en que la
+  // pantalla (lado s) ocupa FOCUS_FILL de la vista. Con media altura visible a distancia d igual a
+  // d·tan(fov/2), queremos s/2 = FOCUS_FILL·d·tan(fov/2) ⇒ d = (s/2) / (FOCUS_FILL·tan(fov/2)).
+  // En pantallas verticales manda el ancho: tan(fov_h/2) = tan(fov/2)·aspecto.
+  const focusPose = useMemo(() => {
+    if (!cockpit.mfd) return null;
+    const f = mfdFrame(cockpit.mfd, root, cockpit.pilotPos);
+    return { ...f, at: (aspect: number) => {
+      const t = Math.tan((FOV_COCKPIT / 2) * DEG) * Math.min(1, aspect);
+      return f.center.clone().addScaledVector(f.normal, f.side / 2 / (FOCUS_FILL * t));
+    } };
+  }, [cockpit, root]);
+
+  // Depuración sólo en desarrollo: /?theta=-40 (ángulo de la órbita) y /?ly=16 (altura a la que mira)
+  const debug = useMemo(() => {
+    if (!import.meta.env.DEV) return { theta: null, ly: null };
+    const q = new URLSearchParams(location.search);
+    const n = (k: string) => (q.get(k) === null ? null : Number(q.get(k)));
+    const th = n('theta');
+    return { theta: th === null ? null : th * DEG, ly: n('ly') };
   }, []);
 
-  const debugLy = useMemo(() => {
-    if (!import.meta.env.DEV) return null;
-    const v = new URLSearchParams(location.search).get('ly');
-    return v === null ? null : Number(v);
-  }, []);
+  // ---- Clic en el MFD → focus (raycast propio contra sus 2 triángulos) ----
+  // R3F lanzaría el rayo contra toda la escena (27 000 triángulos) en cada clic; aquí sólo hace
+  // falta saber si el rayo toca la pantalla. La fase 6 reutiliza este rayo para leer la UV.
+  useEffect(() => {
+    const mfd = cockpit.mfd;
+    if (!mfd) return;
+    const ray = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    const el = gl.domElement;
+    const hits = (e: MouseEvent) => {
+      // Coordenadas normalizadas del dispositivo: [−1, 1] en ambos ejes, y hacia arriba.
+      const r = el.getBoundingClientRect();
+      ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera);
+      return ray.intersectObject(mfd, false).length > 0;
+    };
+    const inside = () => useFlight.getState().camMode !== 'exterior';
+    // 'click' y no 'pointerup': el navegador no lo dispara si el puntero se arrastró (p. ej. al
+    // mirar alrededor con el dedo), así que un arrastre que termina sobre el MFD no cuenta.
+    const click = (e: MouseEvent) => {
+      if (!inside() || e.button !== 0) return;
+      const onMfd = hits(e);
+      const mode = useFlight.getState().camMode;
+      if (onMfd && mode !== 'focus') enterFocus();
+      else if (!onMfd && mode === 'focus') release(); // clic fuera de la pantalla: volver
+    };
+    // Cursor de mano al pasar por encima del MFD: el usuario descubre que se puede pulsar.
+    const move = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return;
+      el.style.cursor = inside() && useFlight.getState().camMode !== 'focus' && hits(e) ? 'pointer' : '';
+    };
+    el.addEventListener('click', click);
+    el.addEventListener('pointermove', move);
+    return () => {
+      el.removeEventListener('click', click);
+      el.removeEventListener('pointermove', move);
+      el.style.cursor = '';
+    };
+  }, [cockpit, camera, gl]);
 
   // Prioridad negativa: corre ANTES que el resto de useFrame (p. ej. el cielo, que debe leer
   // la posición ya actualizada de la cámara). Ojo: una prioridad POSITIVA desactivaría el
   // renderizado automático de R3F.
-  useFrame((_, dt) => {
+  useFrame((state, dt) => {
     const t = THREE.MathUtils.clamp(rig.enter, 0, 1);
+    const mode = useFlight.getState().camMode;
+    dt = Math.min(dt, 0.05);
 
     // La órbita sólo avanza mientras no hemos empezado a entrar (se congela suavemente).
-    if (debugTheta !== null) theta.current = debugTheta;
+    if (debug.theta !== null) theta.current = debug.theta;
     else if (!reduced) theta.current += ORBIT_SPEED * dt * (1 - t);
 
     tmp.p0.set(Math.sin(theta.current) * ORBIT_RADIUS, ORBIT_HEIGHT, Math.cos(theta.current) * ORBIT_RADIUS);
 
-    // Bézier cuadrática
+    // ---- Cabeza: suavizado exponencial hacia el objetivo (k = 1 − e^(−λ·dt)) ----
+    const L = rig.look;
+    const lambda = reduced ? 30 : HEAD_LAMBDA;
+    L.yaw = damp(L.yaw, L.tYaw, lambda, dt);
+    L.pitch = damp(L.pitch, L.tPitch, lambda, dt);
+
+    // Ojos = cuello + R(cabeza)·EYE_FROM_NECK, más la inclinación lateral del tronco.
+    // Guiñada positiva = mirar a la DERECHA = girar hacia −X (por eso el signo menos en Y).
+    tmp.e.set(-L.pitch * DEG, -L.yaw * DEG, 0, 'YXZ');
+    tmp.head.copy(EYE_FROM_NECK).applyEuler(tmp.e).add(tmp.neck);
+    tmp.head.x -= Math.sin(L.yaw * DEG) * LEAN;
+
+    // Bézier cuadrática de la entrada; su punto final son los ojos (ya con la cabeza aplicada).
     const a = (1 - t) * (1 - t), b = 2 * (1 - t) * t, c = t * t;
-    tmp.pos.set(0, 0, 0).addScaledVector(tmp.p0, a).addScaledVector(APPROACH, b).addScaledVector(cockpit.pilotPos, c);
+    tmp.pos.set(0, 0, 0).addScaledVector(tmp.p0, a).addScaledVector(APPROACH, b).addScaledVector(tmp.head, c);
+
+    // Dirección de la mirada en cabina: COCKPIT_PITCH + cabeceo de la cabeza, y la guiñada.
+    // Coordenadas esféricas con delante = +Z y derecha = −X.
+    const yaw = L.yaw * DEG, pitch = (COCKPIT_PITCH + L.pitch) * DEG;
+    tmp.dir.set(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
 
     // Hacia dónde mira: se mantiene en el avión hasta estar cerca y entonces gira al frente.
-    tmp.look.lerpVectors(LOOK_EXTERIOR, tmp.lookForward, smoothstep(0.35, 1, t));
-    if (debugLy !== null && t < 1) tmp.look.y = debugLy;
+    tmp.look.copy(tmp.head).addScaledVector(tmp.dir, 50);
+    tmp.look.lerpVectors(LOOK_EXTERIOR, tmp.look, smoothstep(0.35, 1, t));
+    if (debug.ly !== null && t < 1) tmp.look.y = debug.ly;
 
     // Matrix4.lookAt(eye, target, up) construye una rotación cuyo eje −Z apunta de eye a target,
     // que es la convención de las cámaras de three.js. La aplicamos en el espacio local.
     tmp.m.lookAt(tmp.pos, tmp.look, tmp.up);
+    tmp.q.setFromRotationMatrix(tmp.m);
+
+    // ---- Focus: mezcla hacia la pose frente al MFD ----
+    // Posición: interpolación lineal; orientación: slerp (interpolación esférica de cuaterniones,
+    // que gira por el arco más corto a velocidad angular constante; interpolar ángulos de Euler
+    // por separado haría trayectorias raras).
+    rig.focus = reduced ? (mode === 'focus' ? 1 : 0) : damp(rig.focus, mode === 'focus' ? 1 : 0, FOCUS_LAMBDA, dt);
+    if (focusPose && rig.focus > 1e-3) {
+      const k = smoothstep(0, 1, rig.focus);
+      const at = focusPose.at(state.size.width / state.size.height);
+      tmp.m.lookAt(at, focusPose.center, tmp.up);
+      tmp.qFocus.setFromRotationMatrix(tmp.m);
+      tmp.pos.lerp(at, k);
+      tmp.q.slerp(tmp.qFocus, k);
+    }
     camera.position.copy(tmp.pos);
-    camera.quaternion.setFromRotationMatrix(tmp.m);
+    camera.quaternion.copy(tmp.q);
 
     // El zoom "se abre" al entrar: lente de 38° (tele, para ver el avión) → 62° (visión humana en cabina).
     const fov = THREE.MathUtils.lerp(FOV_EXTERIOR, FOV_COCKPIT, smoothstep(0.3, 1, t));

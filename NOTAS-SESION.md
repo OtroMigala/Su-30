@@ -16,8 +16,9 @@ descubrió trabajando, para retomar en otro PC sin perder contexto. Última actu
 | 2 Ruta de vuelo y scroll (waypoints, snap, alabeo, tests de `route.ts`) | hecha | (commit de la fase 2) |
 | 3 HUD en pantalla portado del prototipo | hecha | (commit de la fase 3) |
 | 4 HUD del combinador con stencil | hecha | (commit de la fase 4) |
-| 5 Vista libre (F) y modo focus | **siguiente** | |
-| 6–7 | pendientes | |
+| 5 Vista libre (F) y modo focus | hecha | (commit de la fase 5) |
+| 6 MFD interactivo con raycast y objetivos 3D | **siguiente** | |
+| 7 | pendiente | |
 
 Forma de trabajo pedida: antes de cada fase, explicar el enfoque en pocas líneas (comparando opciones
 y recomendando una); al final, detenerse, explicar cómo probarla y hacer commit. Responder en español y
@@ -158,6 +159,20 @@ comentar el porqué de cada técnica, sobre todo la matemática y la física (el
   conformes colocados en grados (`LAYOUT`): rumbo abajo-centro (±20°), cintas en ±9°, Mach/G y waypoint por fuera de los
   soportes en −9.6°; todo recortado por debajo de +2° (arco). Sin cajas negras: un combinador sólo suma luz.
   Si se cambia mucho la escala o se reexporta la cabina, revisar `LAYOUT`.
+
+## Arquitectura añadida (fase 5)
+
+- Estados: exterior → cockpit ⇄ free (F; Esc) y cockpit → focus (clic en el MFD; Esc, clic fuera o botón VOLVER).
+  `applyProgress` fuerza exterior si enter < 0.999 desde cualquier modo.
+- `src/input/look.ts`: toggleFree/release/enterFocus; ratón = posición absoluta → yaw ±75°, pitch ±35° (como el prototipo,
+  sin pointer lock para poder pulsar el HUD); táctil = arrastre relativo (160° por ancho de ventana) con `body.looking`
+  (touch-action: none). Lo inicia `initKeyboard`.
+- `CameraRig.tsx`: cabeza articulada en el cuello (ojos 8 cm arriba y 9 cm delante del cuello) + inclinación lateral 7 cm
+  → paralaje en la cabina, ninguno en el HUD (1000 m). Suavizado λ = 7 (`rig.look`). Focus: `rig.focus` con damp λ = 4.5,
+  posición lineal + slerp; distancia para que el MFD ocupe el 75 % de la vista (en vertical manda el ancho).
+  Raycast propio contra `mfd_main` en `click` (no pointerup: un arrastre no cuenta) y cursor de mano encima.
+- Overlay: HEAD FREE, botón MIRAR (≤ 760 px), VOLVER · ESC en focus; en focus se ocultan estado, radar, menú y ayuda.
+- Idea del autor para después de la fase 7: modo de vuelo con control manual del avión (alabeo/cabeceo a gusto).
 - Aviso inofensivo en consola: "THREE.Clock deprecated" viene de R3F, no del proyecto.
 
 ## Cómo se verificó visualmente (no hay GPU en las pruebas automáticas)

@@ -11,6 +11,9 @@ export function KeysHelp() {
       <div>
         <kbd>1</kbd>–<kbd>6</kbd> salto directo · <kbd>M</kbd> sonido
       </div>
+      <div>
+        <kbd>F</kbd> mirar alrededor · <kbd>ESC</kbd> soltar · clic en la pantalla
+      </div>
     </div>
   );
 }

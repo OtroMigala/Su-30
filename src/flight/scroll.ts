@@ -27,11 +27,11 @@ function applyProgress(P: number) {
   const { enter, s } = scrollToFlight(P);
   rig.enter = enter;
   rig.s = s;
-  // Fase 5: free y focus no se pisarán; de momento sólo exterior ⇄ cockpit.
-  const mode = useFlight.getState().camMode;
-  if (mode === 'exterior' || mode === 'cockpit') {
-    useFlight.getState().setCamMode(enter >= 0.999 ? 'cockpit' : 'exterior');
-  }
+  // Salir de la cabina (aunque sea un poco) vuelve al exterior desde cualquier modo; al llegar a
+  // la cabina desde fuera se entra en 'cockpit'. Dentro, free y focus se respetan.
+  const store = useFlight.getState();
+  if (enter < 0.999) store.setCamMode('exterior');
+  else if (store.camMode === 'exterior') store.setCamMode('cockpit');
 }
 
 /**

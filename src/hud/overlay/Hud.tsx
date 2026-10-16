@@ -6,6 +6,7 @@ import { Radio } from './Radio';
 import { KeysHelp } from './KeysHelp';
 import { Radar } from './Radar';
 import { WeaponMenu } from './WeaponMenu';
+import { LookControls } from './LookControls';
 import { radio } from './radioQueue';
 
 /**
@@ -15,6 +16,7 @@ import { radio } from './radioQueue';
  */
 export function Hud() {
   const on = useFlight((s) => s.camMode !== 'exterior');
+  const focus = useFlight((s) => s.camMode === 'focus');
 
   // Radio al llegar a cada sección. Fuera de la cabina no se habla; al entrar por primera vez
   // se anuncia la sección en la que estás.
@@ -34,12 +36,13 @@ export function Hud() {
   }, []);
 
   return (
-    <div className={`hud${on ? ' on' : ''}`} inert={!on}>
+    <div className={`hud${on ? ' on' : ''}${focus ? ' focus' : ''}`} inert={!on}>
       <Status />
       <Radio />
       <KeysHelp />
       <Radar />
       <WeaponMenu />
+      <LookControls />
     </div>
   );
 }

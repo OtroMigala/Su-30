@@ -52,7 +52,7 @@ export function Aircraft() {
   return (
     <group name="aircraft" ref={group}>
       <primitive object={scene} />
-      <CameraRig cockpit={cockpit} />
+      <CameraRig cockpit={cockpit} root={scene} />
       <CombinerHud cockpit={cockpit} root={scene} />
       {/* Luz tenue dentro de la cabina: sin ella el asiento y los laterales son negro puro.
           No pretende ser realista, sólo que se distinga la estructura. */}

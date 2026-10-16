@@ -1,5 +1,6 @@
 import { goToSection, setThrottleDir } from '../flight/scroll';
 import { N } from '../flight/route';
+import { initLook, release, toggleFree } from './look';
 import { setMuted, unlockAudio } from '../audio/engine';
 import { useFlight } from '../store/flight';
 
@@ -8,6 +9,7 @@ import { useFlight } from '../store/flight';
  *   W / S  acelerar hacia delante / atrás (mantener pulsada)
  *   Q / E  mover el cursor del menú de secciones · Enter: volar a la sección elegida
  *   1 … 6  volar directamente a una sección
+ *   F      vista libre (mirar alrededor) · Esc: soltar la cabeza / salir del MFD
  *   M      silenciar el sonido
  *
  * Se usa KeyboardEvent.code (la tecla FÍSICA) y no .key (el carácter): en un teclado AZERTY la
@@ -38,6 +40,8 @@ export function initKeyboard() {
     if (e.repeat) return;
     const s = useFlight.getState();
     if (e.code === 'KeyM') s.setMuted(!s.muted);
+    else if (e.code === 'KeyF') toggleFree();
+    else if (e.code === 'Escape') release();
     // Q/E: el cursor da la vuelta (módulo N). Sumar N antes del % evita restos negativos en JS.
     else if (e.code === 'KeyQ') s.setMenuSel((s.menuSel + N - 1) % N);
     else if (e.code === 'KeyE') s.setMenuSel((s.menuSel + 1) % N);
@@ -59,12 +63,14 @@ export function initKeyboard() {
     update();
   };
   const gesture = () => unlockAudio();
+  const stopLook = initLook();
 
   addEventListener('keydown', down);
   addEventListener('keyup', up);
   addEventListener('blur', blur);
   addEventListener('pointerdown', gesture);
   return () => {
+    stopLook();
     unsub();
     removeEventListener('keydown', down);
     removeEventListener('keyup', up);

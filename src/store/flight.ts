@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 import { createFlightState } from '../flight/route';
 
-// Máquina de estados de la cámara (CLAUDE.md): exterior → cockpit ⇄ free / focus.
-// Las fases 1 y 2 sólo usan exterior y cockpit; free y focus se activan en la fase 5.
+// Máquina de estados de la cámara (CLAUDE.md):
+//   exterior ──(scroll entra)──► cockpit ──F──► free ──F/Esc──► cockpit
+//                                   └──clic en el MFD──► focus ──Esc/clic fuera──► cockpit
+// Salir de la cabina con el scroll lleva a exterior desde cualquier estado.
 export type CamMode = 'exterior' | 'cockpit' | 'free' | 'focus';
 
 interface FlightStore {
@@ -67,4 +69,8 @@ export const rig = {
   s: 0,
   /** Estado del vuelo (rumbo, alabeo, altitud...) que integra FlightDriver cada fotograma. */
   flight: createFlightState(0),
+  /** Cabeza del piloto en vista libre (grados): valor actual suavizado y objetivo. */
+  look: { yaw: 0, pitch: 0, tYaw: 0, tPitch: 0 },
+  /** Transición al MFD: 0 = ojos del piloto, 1 = cámara frente a la pantalla. */
+  focus: 0,
 };
